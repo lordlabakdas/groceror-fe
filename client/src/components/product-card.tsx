@@ -1,4 +1,4 @@
-import { type Product } from "@shared/schema";
+import { type Product } from "@/types/models";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { useAddToCart } from "@/lib/cart";

@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
-import { type Product } from "@shared/schema";
+import { type Product } from "@/types/models";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
@@ -76,7 +76,7 @@ export default function Cart() {
                 alt={product.name}
                 className="w-16 h-16 object-cover rounded"
               />
-              
+
               <div className="flex-1">
                 <h3 className="font-medium">{product.name}</h3>
                 <p className="text-sm text-muted-foreground">
@@ -89,27 +89,27 @@ export default function Cart() {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => 
+                  onClick={() =>
                     dispatch({
                       type: "UPDATE_QUANTITY",
-                      payload: { id: product.id, quantity: quantity - 1 }
+                      payload: { id: product.id, quantity: quantity - 1 },
                     })
                   }
                   disabled={quantity <= 1}
                 >
                   <Minus className="h-4 w-4" />
                 </Button>
-                
+
                 <span className="w-8 text-center">{quantity}</span>
-                
+
                 <Button
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => 
+                  onClick={() =>
                     dispatch({
                       type: "UPDATE_QUANTITY",
-                      payload: { id: product.id, quantity: quantity + 1 }
+                      payload: { id: product.id, quantity: quantity + 1 },
                     })
                   }
                   disabled={quantity >= product.stock}
@@ -121,7 +121,7 @@ export default function Cart() {
                   variant="destructive"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() => 
+                  onClick={() =>
                     dispatch({ type: "REMOVE_ITEM", payload: product.id })
                   }
                 >
@@ -136,7 +136,7 @@ export default function Cart() {
               <span className="font-medium">Total</span>
               <span className="text-lg font-bold">${total.toFixed(2)}</span>
             </div>
-            
+
             <Button className="w-full">
               Proceed to Checkout
             </Button>

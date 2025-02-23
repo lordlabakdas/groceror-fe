@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { type Product } from "@shared/schema";
+import { type Product } from "@/types/models";
 import { ProductCard } from "@/components/product-card";
 import { Categories } from "@/components/categories";
 import { Input } from "@/components/ui/input";

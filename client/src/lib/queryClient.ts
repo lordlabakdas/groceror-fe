@@ -12,7 +12,11 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
+  // Modify this to match your Python backend URL if different
+  const baseUrl = import.meta.env.VITE_API_URL || '';
+  const fullUrl = `${baseUrl}${url}`;
+
+  const res = await fetch(fullUrl, {
     method,
     headers: data ? { "Content-Type": "application/json" } : {},
     body: data ? JSON.stringify(data) : undefined,
@@ -23,13 +27,15 @@ export async function apiRequest(
   return res;
 }
 
-type UnauthorizedBehavior = "returnNull" | "throw";
 export const getQueryFn: <T>(options: {
-  on401: UnauthorizedBehavior;
+  on401: "returnNull" | "throw";
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
+    const baseUrl = import.meta.env.VITE_API_URL || '';
+    const fullUrl = `${baseUrl}${queryKey[0]}`;
+
+    const res = await fetch(fullUrl, {
       credentials: "include",
     });
 
