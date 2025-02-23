@@ -1,8 +1,16 @@
-import { Link } from "wouter";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowRight } from "lucide-react";
+import { AuthDialog } from "@/components/auth-dialog";
 
 export default function Home() {
+  const [showAuthDialog, setShowAuthDialog] = useState(false);
+  const [authType, setAuthType] = useState<"login" | "register">("login");
+
+  const openAuth = (type: "login" | "register") => {
+    setAuthType(type);
+    setShowAuthDialog(true);
+  };
+
   return (
     <div
       className="min-h-[calc(100vh-4rem)] w-full flex items-center justify-center"
@@ -19,22 +27,24 @@ export default function Home() {
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-2xl mx-auto"></p>
         <div className="flex gap-4 justify-center">
-          <Link href="/login">
-            <Button size="lg" className="gap-2 text-lg">
-              Login
-            </Button>
-          </Link>
-          <Link href="/register">
-            <Button
-              size="lg"
-              variant="outline"
-              className="gap-2 text-lg bg-transparent text-white border-white hover:bg-white hover:text-black"
-            >
-              Register
-            </Button>
-          </Link>
+          <Button size="lg" className="gap-2 text-lg" onClick={() => openAuth("login")}>
+            Login
+          </Button>
+          <Button
+            size="lg"
+            variant="outline"
+            className="gap-2 text-lg bg-transparent text-white border-white hover:bg-white hover:text-black"
+            onClick={() => openAuth("register")}
+          >
+            Register
+          </Button>
         </div>
       </div>
+      <AuthDialog 
+        isOpen={showAuthDialog}
+        onOpenChange={setShowAuthDialog}
+        defaultTab={authType}
+      />
     </div>
   );
 }
