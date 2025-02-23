@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { PasswordStrength } from "./password-strength";
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -15,6 +16,7 @@ interface AuthDialogProps {
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthDialogProps) {
   const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab);
   const [userRole, setUserRole] = useState<"buyer" | "store_owner" | null>(null);
+  const [password, setPassword] = useState("");
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,13 +78,24 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
         )}
         <div className="space-y-2">
           <Label htmlFor="password">Password</Label>
-          <Input id="password" type="password" placeholder="Create a password" required />
+          <Input 
+            id="password" 
+            type="password" 
+            placeholder="Create a password" 
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required 
+          />
+          <PasswordStrength password={password} />
         </div>
         <div className="flex justify-between items-center">
           <Button 
             type="button" 
             variant="ghost" 
-            onClick={() => setUserRole(null)}
+            onClick={() => {
+              setUserRole(null);
+              setPassword("");
+            }}
           >
             Back
           </Button>
@@ -93,7 +106,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={onOpenChange}>
+    <Dialog open={isOpen} onOpenChange={(open) => {
+      if (!open) {
+        setPassword("");
+      }
+      onOpenChange(open);
+    }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle className="text-center">
@@ -102,7 +120,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
         </DialogHeader>
         <Tabs value={activeTab} onValueChange={(v) => {
           setActiveTab(v as "login" | "register");
-          setUserRole(null);  // Reset role when switching tabs
+          setUserRole(null);
+          setPassword("");
         }}>
           <TabsList className="grid w-full grid-cols-2">
             <TabsTrigger value="login">Login</TabsTrigger>
@@ -116,7 +135,14 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
               </div>
               <div className="space-y-2">
                 <Label htmlFor="login-password">Password</Label>
-                <Input id="login-password" type="password" placeholder="Enter your password" required />
+                <Input 
+                  id="login-password" 
+                  type="password" 
+                  placeholder="Enter your password"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required 
+                />
               </div>
               <Button type="submit" className="w-full">
                 Login
