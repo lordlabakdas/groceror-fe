@@ -18,14 +18,20 @@ export default function Home() {
           Fresh Groceries Delivered
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-2xl mx-auto">
-          Shop our wide selection of fresh produce, bakery items, and more. Get everything you need delivered right to your door.
+          Get everything you need delivered right to your door.
         </p>
-        <Link href="/products">
-          <Button size="lg" className="gap-2 text-lg">
-            Shop Now
-            <ArrowRight className="h-5 w-5" />
-          </Button>
-        </Link>
+        <div className="flex gap-4 justify-center">
+          <Link href="/login">
+            <Button size="lg" className="gap-2 text-lg">
+              Login
+            </Button>
+          </Link>
+          <Link href="/register">
+            <Button size="lg" variant="outline" className="gap-2 text-lg bg-transparent text-white border-white hover:bg-white hover:text-black">
+              Register
+            </Button>
+          </Link>
+        </div>
       </div>
     </div>
   );
