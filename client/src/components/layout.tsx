@@ -38,6 +38,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       Products
                     </a>
                   </Link>
+                  <Link href="/inventory">
+                    <a onClick={() => setOpen(false)} className="text-lg font-medium">
+                      Inventory
+                    </a>
+                  </Link>
                 </nav>
               </SheetContent>
             </Sheet>
@@ -49,6 +54,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             <nav className="hidden md:flex items-center gap-6">
               <Link href="/products">
                 <a className="text-sm font-medium">Products</a>
+              </Link>
+              <Link href="/inventory">
+                <a className="text-sm font-medium">Inventory</a>
               </Link>
             </nav>
           </div>

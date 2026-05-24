@@ -1,0 +1,353 @@
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { type GetStoreInventoryResponse } from "@/types/models";
+import { getProductImage } from "@/lib/catalog";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Skeleton } from "@/components/ui/skeleton";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest } from "@/lib/queryClient";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Package,
+  DollarSign,
+  BarChart3,
+  Trash2,
+  Search,
+  RefreshCw,
+  ShoppingBag,
+} from "lucide-react";
+
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
+
+const CATEGORY_LABEL: Record<string, string> = {
+  GROCERY: "Grocery",
+  PRODUCE: "Produce",
+  MEAT: "Meat",
+  DAIRY: "Dairy",
+  BAKERY: "Bakery",
+  OTHER: "Other",
+};
+
+const CATEGORY_COLOR: Record<string, string> = {
+  GROCERY: "bg-amber-100 text-amber-800",
+  PRODUCE: "bg-green-100 text-green-800",
+  MEAT: "bg-red-100 text-red-800",
+  DAIRY: "bg-sky-100 text-sky-800",
+  BAKERY: "bg-orange-100 text-orange-800",
+  OTHER: "bg-purple-100 text-purple-800",
+};
+
+function stockStatus(qty: number): { label: string; color: string } {
+  if (qty === 0) return { label: "Out of Stock", color: "bg-red-100 text-red-700" };
+  if (qty < 5) return { label: "Critical", color: "bg-red-100 text-red-700" };
+  if (qty < 20) return { label: "Low Stock", color: "bg-amber-100 text-amber-700" };
+  return { label: "In Stock", color: "bg-emerald-100 text-emerald-700" };
+}
+
+// ---------------------------------------------------------------------------
+// Stat card
+// ---------------------------------------------------------------------------
+
+interface StatCardProps {
+  icon: React.ReactNode;
+  label: string;
+  value: string | number;
+  sub?: string;
+  gradient: string;
+}
+
+function StatCard({ icon, label, value, sub, gradient }: StatCardProps) {
+  return (
+    <div className={`rounded-2xl p-5 text-white ${gradient} shadow-sm`}>
+      <div className="flex items-center justify-between mb-3">
+        <span className="text-white/80 text-sm font-medium">{label}</span>
+        <div className="bg-white/20 rounded-lg p-1.5">{icon}</div>
+      </div>
+      <p className="text-3xl font-bold tracking-tight">{value}</p>
+      {sub && <p className="text-white/70 text-xs mt-1">{sub}</p>}
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Inventory card
+// ---------------------------------------------------------------------------
+
+interface InventoryCardProps {
+  item: GetStoreInventoryResponse["inventory"][number];
+  onDelete: () => void;
+}
+
+function InventoryCard({ item, onDelete }: InventoryCardProps) {
+  const imgUrl = getProductImage(item.name, item.category);
+  const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
+  const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
+  const categoryColor = CATEGORY_COLOR[item.category] ?? "bg-gray-100 text-gray-700";
+
+  return (
+    <div className="group relative rounded-2xl border bg-card overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
+      {/* image */}
+      <div className="relative h-44 overflow-hidden">
+        <img
+          src={imgUrl}
+          alt={item.name}
+          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+        />
+        {/* category pill */}
+        <span
+          className={`absolute top-2 left-2 text-xs font-semibold px-2 py-0.5 rounded-full ${categoryColor} backdrop-blur-sm`}
+        >
+          {categoryLabel}
+        </span>
+        {/* delete button — appears on hover */}
+        <button
+          onClick={(e) => { e.stopPropagation(); onDelete(); }}
+          className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
+          aria-label="Delete item"
+        >
+          <Trash2 className="h-3.5 w-3.5" />
+        </button>
+      </div>
+
+      {/* body */}
+      <div className="p-4 space-y-3">
+        <div>
+          <h3 className="font-semibold text-base leading-tight">{item.name}</h3>
+          {item.notes && (
+            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{item.notes}</p>
+          )}
+        </div>
+
+        <div className="flex items-center justify-between">
+          <span className="text-2xl font-bold text-primary">
+            ${item.price.toFixed(2)}
+          </span>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor}`}>
+            {stockLabel}
+          </span>
+        </div>
+
+        <div className="flex items-center justify-between text-sm">
+          <span className="text-muted-foreground">Qty</span>
+          <span className="font-semibold tabular-nums">{item.quantity.toLocaleString()} units</span>
+        </div>
+
+        {/* quantity bar */}
+        <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+          <div
+            className={`h-full rounded-full transition-all ${
+              item.quantity === 0
+                ? "bg-red-400"
+                : item.quantity < 5
+                ? "bg-red-400"
+                : item.quantity < 20
+                ? "bg-amber-400"
+                : "bg-emerald-400"
+            }`}
+            style={{ width: `${Math.min(100, (item.quantity / 100) * 100)}%` }}
+          />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
+
+export default function Inventory() {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [search, setSearch] = useState("");
+  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+
+  const { data, isLoading, error, refetch, isFetching } = useQuery<GetStoreInventoryResponse>({
+    queryKey: ["/inventory/get-store-inventory"],
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: (name: string) =>
+      apiRequest("DELETE", `/inventory/delete-inventory?items=${encodeURIComponent(name)}`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      toast({ title: "Removed", description: `${deleteTarget} removed from inventory.` });
+      setDeleteTarget(null);
+    },
+    onError: (err: any) => {
+      toast({ title: "Delete failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const items = data?.inventory ?? [];
+
+  // stats
+  const totalValue = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
+  const lowStockCount = items.filter((i) => i.quantity < 5).length;
+
+  const filtered = items.filter((i) =>
+    i.name.toLowerCase().includes(search.toLowerCase()),
+  );
+
+  // ---- loading skeleton
+  if (isLoading) {
+    return (
+      <div className="space-y-8">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          {[...Array(3)].map((_, i) => (
+            <Skeleton key={i} className="h-28 rounded-2xl" />
+          ))}
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {[...Array(8)].map((_, i) => (
+            <Skeleton key={i} className="h-72 rounded-2xl" />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---- auth / error
+  if (error) {
+    const msg = (error as Error).message ?? "";
+    const isUnauth = msg.startsWith("401") || msg.startsWith("403");
+    return (
+      <div className="flex flex-col items-center justify-center py-32 space-y-3 text-center">
+        <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
+        <p className="text-lg font-medium">
+          {isUnauth ? "Please log in as a store owner to view inventory" : "Could not load inventory"}
+        </p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-8">
+      {/* header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">My Inventory</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            {items.length} {items.length === 1 ? "item" : "items"} in your store
+          </p>
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => refetch()}
+          disabled={isFetching}
+          className="gap-2"
+        >
+          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+          Refresh
+        </Button>
+      </div>
+
+      {/* stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <StatCard
+          gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+          icon={<Package className="h-4 w-4 text-white" />}
+          label="Total SKUs"
+          value={items.length}
+          sub={`${lowStockCount} low stock`}
+        />
+        <StatCard
+          gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+          icon={<BarChart3 className="h-4 w-4 text-white" />}
+          label="Total Units"
+          value={totalUnits.toLocaleString()}
+          sub="across all items"
+        />
+        <StatCard
+          gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+          icon={<DollarSign className="h-4 w-4 text-white" />}
+          label="Inventory Value"
+          value={`$${totalValue.toFixed(2)}`}
+          sub="at current prices"
+        />
+      </div>
+
+      {/* search */}
+      <div className="relative w-full md:w-72">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+        <Input
+          placeholder="Search inventory..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
+      </div>
+
+      {/* grid */}
+      {filtered.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-24 space-y-3 text-center">
+          <ShoppingBag className="h-14 w-14 text-muted-foreground/30" />
+          <p className="text-lg font-medium text-muted-foreground">
+            {items.length === 0
+              ? "No inventory yet"
+              : "No items match your search"}
+          </p>
+          {items.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              Head to{" "}
+              <a href="/products" className="text-primary underline underline-offset-2">
+                Products
+              </a>{" "}
+              to add items to your store.
+            </p>
+          )}
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {filtered.map((item) => (
+            <InventoryCard
+              key={item.id}
+              item={item}
+              onDelete={() => setDeleteTarget(item.name)}
+            />
+          ))}
+        </div>
+      )}
+
+      {/* delete confirm dialog */}
+      <AlertDialog
+        open={deleteTarget !== null}
+        onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remove from inventory?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently remove <strong>{deleteTarget}</strong> from your store inventory. This cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-red-600 hover:bg-red-700"
+              onClick={() => deleteTarget && deleteMutation.mutate(deleteTarget)}
+              disabled={deleteMutation.isPending}
+            >
+              {deleteMutation.isPending ? "Removing…" : "Remove"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+}
