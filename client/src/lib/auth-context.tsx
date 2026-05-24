@@ -1,6 +1,6 @@
 import { createContext, useContext, useState, useCallback } from "react";
 import { useLocation } from "wouter";
-import { getAuthToken, setAuthToken, clearAuthToken } from "./queryClient";
+import { getAuthToken, setAuthToken, clearAuthToken, queryClient } from "./queryClient";
 
 export interface CurrentUser {
   phone: string;
@@ -67,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = useCallback(() => {
     clearAuthToken();
     setUser(null);
+    queryClient.clear();
     setLocation("/");
   }, [setLocation]);
 
