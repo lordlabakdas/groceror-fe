@@ -47,7 +47,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
   const [phone, setPhone] = useState("");
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
-  // "user" maps to groceror's entity_type="user" (buyer); "store" = store owner
+  // "user" maps to groceror's entity_type="user" (shopper); "store" = grocer
   const [entityType, setEntityType] = useState<"user" | "store">("user");
   const [isLoading, setIsLoading] = useState(false);
 
@@ -178,18 +178,6 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
     }
   }
 
-  // ---- OTP input (shared between register and forgot flows) -------------------
-
-  const OtpInput = () => (
-    <InputOTP value={otp} onChange={setOtp} maxLength={6}>
-      <InputOTPGroup>
-        {[...Array(6)].map((_, i) => (
-          <InputOTPSlot key={i} index={i} />
-        ))}
-      </InputOTPGroup>
-    </InputOTP>
-  );
-
   return (
     <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetAndClose(); }}>
       <DialogContent className="sm:max-w-md">
@@ -270,11 +258,11 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
               >
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="user" id="role-user" />
-                  <Label htmlFor="role-user">Buyer</Label>
+                  <Label htmlFor="role-user">Shopper</Label>
                 </div>
                 <div className="flex items-center space-x-2">
                   <RadioGroupItem value="store" id="role-store" />
-                  <Label htmlFor="role-store">Store Owner</Label>
+                  <Label htmlFor="role-store">Grocer</Label>
                 </div>
               </RadioGroup>
             </div>
@@ -301,7 +289,13 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
             </p>
             <div className="space-y-2">
               <Label>Verification Code</Label>
-              <OtpInput />
+              <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+                <InputOTPGroup>
+                  {[...Array(6)].map((_, i) => (
+                    <InputOTPSlot key={i} index={i} />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
             </div>
             <div className="flex justify-between">
               <Button type="button" variant="ghost" onClick={() => setView("register_phone")}>
@@ -319,7 +313,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
           <form onSubmit={handleRegister} className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Phone verified. Set a password for your{" "}
-              {entityType === "store" ? "store account" : "account"}.
+              {entityType === "store" ? "Grocer account" : "Shopper account"}.
             </p>
             <div className="space-y-2">
               <Label htmlFor="reg-password">Password</Label>
@@ -375,7 +369,13 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
             </p>
             <div className="space-y-2">
               <Label>Verification Code</Label>
-              <OtpInput />
+              <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+                <InputOTPGroup>
+                  {[...Array(6)].map((_, i) => (
+                    <InputOTPSlot key={i} index={i} />
+                  ))}
+                </InputOTPGroup>
+              </InputOTP>
             </div>
             <div className="flex justify-between">
               <Button type="button" variant="ghost" onClick={() => setView("forgot_phone")}>

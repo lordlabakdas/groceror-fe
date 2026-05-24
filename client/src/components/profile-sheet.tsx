@@ -104,7 +104,7 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
   }
 
   const avatarLabel = user?.phone.slice(-4) ?? "••";
-  const roleLabel = isStore ? "Store Owner" : "Buyer";
+  const roleLabel = isStore ? "Grocer" : "Shopper";
   const hasProfile = profile?.name || profile?.email;
 
   return (

@@ -320,7 +320,7 @@ export default function Inventory() {
       <div className="flex flex-col items-center justify-center py-32 space-y-3 text-center">
         <ShoppingBag className="h-12 w-12 text-muted-foreground/40" />
         <p className="text-lg font-medium">
-          {isUnauth ? "Please log in as a store owner to view inventory" : "Could not load inventory"}
+          {isUnauth ? "Please log in as a Grocer to view inventory" : "Could not load inventory"}
         </p>
       </div>
     );

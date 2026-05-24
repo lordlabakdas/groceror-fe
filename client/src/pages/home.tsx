@@ -83,7 +83,7 @@ export default function Home() {
 
         {/* description */}
         <p className="relative z-10 mt-4 text-gray-300 text-lg md:text-xl max-w-lg leading-relaxed">
-          The all-in-one platform for grocery store owners and shoppers.
+          The all-in-one platform for grocers and shoppers.
           Manage inventory, browse fresh products, and check out in seconds.
         </p>
 
