@@ -1,50 +1,52 @@
-import { useState } from "react";
+import { useEffect } from "react";
+import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { AuthDialog } from "@/components/auth-dialog";
+import { useAuth } from "@/lib/auth-context";
 
 export default function Home() {
-  const [showAuthDialog, setShowAuthDialog] = useState(false);
-  const [authType, setAuthType] = useState<"login" | "register">("login");
+  const { user, openLogin } = useAuth();
+  const [, setLocation] = useLocation();
 
-  const openAuth = (type: "login" | "register") => {
-    setAuthType(type);
-    setShowAuthDialog(true);
-  };
+  // Already logged in → go straight to products
+  useEffect(() => {
+    if (user) setLocation("/products");
+  }, [user, setLocation]);
 
   return (
     <div
       className="min-h-[calc(100vh-4rem)] w-full flex items-center justify-center"
       style={{
-        backgroundImage: `linear-gradient(rgba(0, 0, 0, 0.6), rgba(0, 0, 0, 0.7)), url(https://images.unsplash.com/photo-1542838132-92c53300491e)`,
+        backgroundImage: `linear-gradient(rgba(0,0,0,0.55), rgba(0,0,0,0.7)), url(https://images.unsplash.com/photo-1542838132-92c53300491e)`,
         backgroundSize: "cover",
         backgroundPosition: "center",
         backgroundAttachment: "fixed",
       }}
     >
       <div className="max-w-4xl mx-auto px-4 text-center">
-        <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white">
-          Groceror!
+        <h1 className="text-5xl md:text-7xl font-bold mb-4 text-white tracking-tight">
+          groceror
         </h1>
-        <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-2xl mx-auto"></p>
+        <p className="text-lg md:text-xl mb-10 text-gray-300 max-w-xl mx-auto">
+          Manage your store inventory and shop fresh groceries — all in one place.
+        </p>
         <div className="flex gap-4 justify-center">
-          <Button size="lg" className="gap-2 text-lg" onClick={() => openAuth("login")}>
+          <Button
+            size="lg"
+            className="text-base px-8"
+            onClick={() => openLogin("login")}
+          >
             Login
           </Button>
           <Button
             size="lg"
             variant="outline"
-            className="gap-2 text-lg bg-transparent text-white border-white hover:bg-white hover:text-black"
-            onClick={() => openAuth("register")}
+            className="text-base px-8 bg-transparent text-white border-white hover:bg-white hover:text-black"
+            onClick={() => openLogin("register")}
           >
-            Register
+            Get Started
           </Button>
         </div>
       </div>
-      <AuthDialog 
-        isOpen={showAuthDialog}
-        onOpenChange={setShowAuthDialog}
-        defaultTab={authType}
-      />
     </div>
   );
 }

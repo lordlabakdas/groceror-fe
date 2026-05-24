@@ -7,7 +7,8 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PasswordStrength } from "./password-strength";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
-import { apiRequest, setAuthToken } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthDialogProps {
@@ -36,6 +37,7 @@ const TITLES: Record<AuthView, string> = {
 
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthDialogProps) {
   const { toast } = useToast();
+  const { login } = useAuth();
   const [, setLocation] = useLocation();
 
   const [view, setView] = useState<AuthView>(
@@ -67,7 +69,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
     try {
       const res = await apiRequest("POST", "/user/login", { phone, password });
       const data = await res.json();
-      setAuthToken(data.token);
+      login(data.token);
       toast({ title: "Logged in", description: "Welcome back!" });
       resetAndClose();
       setLocation("/products");
@@ -123,7 +125,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
       // Auto-login so the user lands in an authenticated state immediately.
       const loginRes = await apiRequest("POST", "/user/login", { phone, password });
       const { token } = await loginRes.json();
-      setAuthToken(token);
+      login(token);
       toast({ title: "Account created!", description: "You're now logged in." });
       resetAndClose();
       setLocation("/products");

@@ -3,6 +3,8 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "./lib/cart";
+import { AuthProvider, useAuth } from "./lib/auth-context";
+import { AuthDialog } from "./components/auth-dialog";
 import { Layout } from "./components/layout";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
@@ -22,15 +24,31 @@ function Router() {
   );
 }
 
+// Reads dialog state from AuthContext and renders the single shared AuthDialog.
+function AuthDialogBridge() {
+  const { dialogOpen, dialogTab, setDialogOpen } = useAuth();
+  return (
+    <AuthDialog
+      key={dialogTab}
+      isOpen={dialogOpen}
+      onOpenChange={setDialogOpen}
+      defaultTab={dialogTab}
+    />
+  );
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <CartProvider>
-        <Layout>
-          <Router />
-        </Layout>
-        <Toaster />
-      </CartProvider>
+      <AuthProvider>
+        <CartProvider>
+          <Layout>
+            <Router />
+          </Layout>
+          <Toaster />
+          <AuthDialogBridge />
+        </CartProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
