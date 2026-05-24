@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -12,13 +12,18 @@ import Products from "@/pages/products";
 import Cart from "@/pages/cart";
 import Inventory from "@/pages/inventory";
 
+function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { user } = useAuth();
+  return user ? <Component /> : <Redirect to="/" />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/products" component={Products} />
-      <Route path="/cart" component={Cart} />
-      <Route path="/inventory" component={Inventory} />
+      <Route path="/products">{() => <ProtectedRoute component={Products} />}</Route>
+      <Route path="/cart">{() => <ProtectedRoute component={Cart} />}</Route>
+      <Route path="/inventory">{() => <ProtectedRoute component={Inventory} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );
