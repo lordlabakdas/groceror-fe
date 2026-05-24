@@ -15,12 +15,14 @@ React frontend for [groceror](https://github.com/lordlabakdas/groceror) — a gr
 
 ## Pages
 
-| Route | Description |
-|---|---|
-| `/` | Landing page with login / register dialog |
-| `/products` | Static product catalog — add items to your Myventory |
-| `/inventory` | Myventory — your store's live stock with stats, edit, and delete |
-| `/cart` | Shopping cart with quantity controls and checkout |
+| Route | Access | Description |
+|---|---|---|
+| `/` | Public | Landing page — hero, features, login / register |
+| `/products` | Auth required | Static product catalog — add items to your Myventory |
+| `/inventory` | Auth required | Myventory — live stock with stats, edit, and delete |
+| `/cart` | Auth required | Shopping cart with quantity controls |
+
+Unauthenticated users who visit a protected route are redirected to `/`.
 
 ## Prerequisites
 
@@ -33,9 +35,8 @@ React frontend for [groceror](https://github.com/lordlabakdas/groceror) — a gr
 # Install dependencies
 npm install
 
-# Configure the backend URL (copy and edit)
-cp .env.example .env
-# VITE_API_URL=http://localhost:8000
+# Configure the backend URL
+echo "VITE_API_URL=http://localhost:8000" > .env
 
 # Start the dev server (frontend + Express proxy on :5000)
 npm run dev
@@ -59,7 +60,7 @@ VITE_API_URL=http://localhost:8000
 
 ## Auth flow
 
-Authentication is phone-based via groceror's OTP API — no passwords are required at the OTP stage:
+Authentication is phone-based via groceror's OTP API:
 
 1. Enter phone number → `POST /user/send-otp`
 2. Enter 6-digit OTP → `POST /user/verify-otp`
@@ -68,29 +69,43 @@ Authentication is phone-based via groceror's OTP API — no passwords are requir
 
 All subsequent API calls include `Authorization: Bearer <token>`.
 
+The JWT payload includes `sub` (phone) and `entity_type` (`"user"` or `"store"`). The frontend decodes this client-side (no extra round-trip) to show the correct role in the navbar and conditionally render store-owner features.
+
+## Navbar behaviour
+
+| State | What you see |
+|---|---|
+| Logged out | Logo + **Login** button only |
+| Logged in | Logo + Products + Myventory nav links + user chip + cart icon |
+
+The user chip shows the last 4 digits of your phone number. Clicking it opens a dropdown with your full phone, role badge (Buyer / Store Owner), and a **Log out** option. Logging out clears the token and returns to `/`.
+
 ## Project structure
 
 ```
 ├── client/
+│   ├── public/
+│   │   └── logo.png              # Groceror brand logo
 │   └── src/
-│       ├── components/       # Shared UI components
-│       │   ├── auth-dialog.tsx
-│       │   ├── categories.tsx
-│       │   ├── layout.tsx
-│       │   └── ui/           # shadcn/ui primitives
+│       ├── components/
+│       │   ├── auth-dialog.tsx   # OTP + password registration/login dialog
+│       │   ├── categories.tsx    # Category filter pills
+│       │   ├── layout.tsx        # App shell — navbar, route-aware container
+│       │   └── ui/               # shadcn/ui primitives
 │       ├── lib/
-│       │   ├── catalog.ts    # Static product catalog + image lookup
-│       │   ├── cart.tsx      # Cart context + groceror cart API sync
-│       │   └── queryClient.ts # Fetch wrapper with JWT injection
+│       │   ├── auth-context.tsx  # AuthProvider + useAuth hook (login/logout/openLogin)
+│       │   ├── catalog.ts        # Static product catalog + image lookup
+│       │   ├── cart.tsx          # Cart context + groceror cart API sync
+│       │   └── queryClient.ts    # Fetch wrapper with JWT injection
 │       ├── pages/
-│       │   ├── home.tsx
-│       │   ├── products.tsx
-│       │   ├── inventory.tsx
-│       │   └── cart.tsx
+│       │   ├── home.tsx          # Public landing page
+│       │   ├── products.tsx      # Product catalog (protected)
+│       │   ├── inventory.tsx     # Myventory dashboard (protected)
+│       │   └── cart.tsx          # Shopping cart (protected)
 │       └── types/
-│           └── models.ts     # Shared TypeScript types
-├── server/                   # Thin Express server (dev proxy + static serving)
-├── .env                      # Local env vars (not committed)
+│           └── models.ts         # Shared TypeScript types
+├── server/                       # Thin Express server (dev proxy + static serving)
+├── .env                          # Local env vars (not committed)
 ├── vite.config.ts
 └── tailwind.config.ts
 ```
