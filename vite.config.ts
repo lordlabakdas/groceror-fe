@@ -9,6 +9,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 
 export default defineConfig({
+  // .env lives in the project root, but Vite's root is client/.
+  // envDir overrides the default (which would be client/) so VITE_API_URL is picked up.
+  envDir: path.resolve(__dirname),
   plugins: [
     react(),
     runtimeErrorOverlay(),
