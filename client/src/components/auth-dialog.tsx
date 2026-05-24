@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useLocation } from "wouter";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -35,6 +36,7 @@ const TITLES: Record<AuthView, string> = {
 
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthDialogProps) {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
 
   const [view, setView] = useState<AuthView>(
     defaultTab === "register" ? "register_phone" : "login",
@@ -68,6 +70,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
       setAuthToken(data.token);
       toast({ title: "Logged in", description: "Welcome back!" });
       resetAndClose();
+      setLocation("/products");
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
     } finally {
@@ -123,6 +126,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
       setAuthToken(token);
       toast({ title: "Account created!", description: "You're now logged in." });
       resetAndClose();
+      setLocation("/products");
     } catch (err: any) {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
     } finally {
