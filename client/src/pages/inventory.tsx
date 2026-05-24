@@ -19,10 +19,18 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
   Package,
   DollarSign,
   BarChart3,
   Trash2,
+  Pencil,
   Search,
   RefreshCw,
   ShoppingBag,
@@ -83,15 +91,88 @@ function StatCard({ icon, label, value, sub, gradient }: StatCardProps) {
 }
 
 // ---------------------------------------------------------------------------
+// Edit dialog
+// ---------------------------------------------------------------------------
+
+type InventoryItem = GetStoreInventoryResponse["inventory"][number];
+
+interface EditDialogProps {
+  item: InventoryItem | null;
+  onClose: () => void;
+}
+
+function EditInventoryDialog({ item, onClose }: EditDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [quantity, setQuantity] = useState(item?.quantity ?? 0);
+  const [price, setPrice] = useState(item?.price ?? 0);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PUT", `/inventory/${item!.id}`, { quantity, price }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      toast({ title: "Updated", description: `${item!.name} updated.` });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  if (!item) return null;
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit — {item.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
+          <div className="space-y-1">
+            <Label htmlFor="edit-qty">Quantity</Label>
+            <Input
+              id="edit-qty"
+              type="number"
+              min={0}
+              value={quantity}
+              onChange={(e) => setQuantity(Number(e.target.value))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-price">Price ($)</Label>
+            <Input
+              id="edit-price"
+              type="number"
+              min={0}
+              step={0.01}
+              value={price}
+              onChange={(e) => setPrice(Number(e.target.value))}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+// ---------------------------------------------------------------------------
 // Inventory card
 // ---------------------------------------------------------------------------
 
 interface InventoryCardProps {
-  item: GetStoreInventoryResponse["inventory"][number];
+  item: InventoryItem;
   onDelete: () => void;
+  onEdit: () => void;
 }
 
-function InventoryCard({ item, onDelete }: InventoryCardProps) {
+function InventoryCard({ item, onDelete, onEdit }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
@@ -112,14 +193,23 @@ function InventoryCard({ item, onDelete }: InventoryCardProps) {
         >
           {categoryLabel}
         </span>
-        {/* delete button — appears on hover */}
-        <button
-          onClick={(e) => { e.stopPropagation(); onDelete(); }}
-          className="absolute top-2 right-2 bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-full p-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 shadow-sm"
-          aria-label="Delete item"
-        >
-          <Trash2 className="h-3.5 w-3.5" />
-        </button>
+        {/* action buttons — appear on hover */}
+        <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit(); }}
+            className="bg-white/90 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-full p-1.5 shadow-sm"
+            aria-label="Edit item"
+          >
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete(); }}
+            className="bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-full p-1.5 shadow-sm"
+            aria-label="Delete item"
+          >
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
 
       {/* body */}
@@ -174,6 +264,7 @@ export default function Inventory() {
   const queryClient = useQueryClient();
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
+  const [editTarget, setEditTarget] = useState<InventoryItem | null>(null);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<GetStoreInventoryResponse>({
     queryKey: ["/inventory/get-store-inventory"],
@@ -319,10 +410,17 @@ export default function Inventory() {
               key={item.id}
               item={item}
               onDelete={() => setDeleteTarget(item.name)}
+              onEdit={() => setEditTarget(item)}
             />
           ))}
         </div>
       )}
+
+      {/* edit dialog */}
+      <EditInventoryDialog
+        item={editTarget}
+        onClose={() => setEditTarget(null)}
+      />
 
       {/* delete confirm dialog */}
       <AlertDialog
