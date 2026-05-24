@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ShoppingCart, Menu, LogOut, User } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -19,6 +19,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const { state } = useCart();
   const { user, logout, openLogin } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [location] = useLocation();
 
   const totalItems = state.items.reduce((acc, item) => acc + item.quantity, 0);
   const roleLabel = user?.entityType === "store" ? "Store Owner" : "Buyer";
@@ -173,7 +174,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
+      <main className={location === "/" ? "" : "container mx-auto px-4 py-8"}>
         {children}
       </main>
     </div>
