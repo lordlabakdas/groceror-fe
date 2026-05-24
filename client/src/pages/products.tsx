@@ -46,7 +46,7 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
-      toast({ title: "Added to inventory", description: `${item!.name} added.` });
+      toast({ title: "Added to Myventory", description: `${item!.name} added.` });
       onSuccess(item!.name);
       onClose();
     },
@@ -65,7 +65,7 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Add to Inventory</DialogTitle>
+          <DialogTitle>Add to Myventory</DialogTitle>
         </DialogHeader>
         <div className="flex gap-4 mb-4">
           <img
@@ -115,7 +115,7 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
               Cancel
             </Button>
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-              {mutation.isPending ? "Adding…" : "Add to Inventory"}
+              {mutation.isPending ? "Adding…" : "Add to Myventory"}
             </Button>
           </div>
         </div>

@@ -1,6 +1,6 @@
 # groceror-fe
 
-React frontend for [groceror](https://github.com/lordlabakdas/groceror) — a grocery store management platform. Store owners can browse a product catalog, manage their inventory, and track cart activity. Buyers can browse and shop.
+React frontend for [groceror](https://github.com/lordlabakdas/groceror) — a grocery store management platform. Store owners can browse a product catalog, manage their Myventory, and track cart activity. Buyers can browse and shop.
 
 ## Stack
 
@@ -18,8 +18,8 @@ React frontend for [groceror](https://github.com/lordlabakdas/groceror) — a gr
 | Route | Description |
 |---|---|
 | `/` | Landing page with login / register dialog |
-| `/products` | Static product catalog — add items to your store inventory |
-| `/inventory` | Your store's live inventory with stats, edit, and delete |
+| `/products` | Static product catalog — add items to your Myventory |
+| `/inventory` | Myventory — your store's live stock with stats, edit, and delete |
 | `/cart` | Shopping cart with quantity controls and checkout |
 
 ## Prerequisites

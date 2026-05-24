@@ -275,7 +275,7 @@ export default function Inventory() {
       apiRequest("DELETE", `/inventory/delete-inventory?items=${encodeURIComponent(name)}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
-      toast({ title: "Removed", description: `${deleteTarget} removed from inventory.` });
+      toast({ title: "Removed", description: `${deleteTarget} removed from Myventory.` });
       setDeleteTarget(null);
     },
     onError: (err: any) => {
@@ -331,7 +331,7 @@ export default function Inventory() {
       {/* header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">My Inventory</h1>
+          <h1 className="text-3xl font-bold tracking-tight">Myventory</h1>
           <p className="text-muted-foreground text-sm mt-1">
             {items.length} {items.length === 1 ? "item" : "items"} in your store
           </p>
