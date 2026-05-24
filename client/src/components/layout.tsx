@@ -40,24 +40,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
-                <nav className="flex flex-col gap-1 mt-8">
-                  <Link href="/products">
-                    <a
-                      onClick={() => setDrawerOpen(false)}
-                      className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                    >
-                      Products
-                    </a>
-                  </Link>
-                  <Link href="/inventory">
-                    <a
-                      onClick={() => setDrawerOpen(false)}
-                      className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                    >
-                      Myventory
-                    </a>
-                  </Link>
-                </nav>
+                {user && (
+                  <nav className="flex flex-col gap-1 mt-8">
+                    <Link href="/products">
+                      <a
+                        onClick={() => setDrawerOpen(false)}
+                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                      >
+                        Products
+                      </a>
+                    </Link>
+                    <Link href="/inventory">
+                      <a
+                        onClick={() => setDrawerOpen(false)}
+                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                      >
+                        Myventory
+                      </a>
+                    </Link>
+                  </nav>
+                )}
 
                 <div className="absolute bottom-8 left-4 right-4">
                   {user ? (
@@ -90,19 +92,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <a className="text-xl font-bold tracking-tight">groceror</a>
             </Link>
 
-            {/* desktop nav links */}
-            <nav className="hidden md:flex items-center gap-1 ml-2">
-              <Link href="/products">
-                <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                  Products
-                </a>
-              </Link>
-              <Link href="/inventory">
-                <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                  Myventory
-                </a>
-              </Link>
-            </nav>
+            {/* desktop nav links — only when logged in */}
+            {user && (
+              <nav className="hidden md:flex items-center gap-1 ml-2">
+                <Link href="/products">
+                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
+                    Products
+                  </a>
+                </Link>
+                <Link href="/inventory">
+                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
+                    Myventory
+                  </a>
+                </Link>
+              </nav>
+            )}
           </div>
 
           {/* ---- right: auth + cart ---- */}
