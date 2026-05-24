@@ -1,12 +1,13 @@
 import { useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PasswordStrength } from "./password-strength";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
+import { apiRequest, setAuthToken } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -14,254 +15,369 @@ interface AuthDialogProps {
   defaultTab?: "login" | "register";
 }
 
-type AuthView = "login" | "register" | "forgot_password" | "reset_password";
+// Each value is one screen in the dialog.
+type AuthView =
+  | "login"
+  | "register_phone"    // Step 1: enter phone + pick role
+  | "register_otp"      // Step 2: verify OTP
+  | "register_password" // Step 3: set password → complete registration
+  | "forgot_phone"      // Forgot PW step 1: enter phone
+  | "forgot_otp";       // Forgot PW step 2: verify OTP
+
+const TITLES: Record<AuthView, string> = {
+  login: "Welcome Back",
+  register_phone: "Create Account",
+  register_otp: "Verify Your Phone",
+  register_password: "Set a Password",
+  forgot_phone: "Reset Password",
+  forgot_otp: "Enter Verification Code",
+};
 
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthDialogProps) {
-  const [activeTab, setActiveTab] = useState<"login" | "register">(defaultTab);
-  const [userRole, setUserRole] = useState<"buyer" | "store_owner" | null>(null);
-  const [password, setPassword] = useState("");
-  const [view, setView] = useState<AuthView>("login");
-  const [resetEmail, setResetEmail] = useState("");
-  const [otp, setOtp] = useState("");
+  const { toast } = useToast();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement authentication
-    onOpenChange(false);
-  };
-
-  const handleForgotPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement forgot password logic
-    setView("reset_password");
-  };
-
-  const handleResetPassword = async (e: React.FormEvent) => {
-    e.preventDefault();
-    // TODO: Implement reset password logic
-    setView("login");
-    onOpenChange(false);
-  };
-
-  const RegisterForm = () => {
-    if (!userRole) {
-      return (
-        <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label>Select your role</Label>
-            <RadioGroup
-              defaultValue={userRole || undefined}
-              onValueChange={(value) => setUserRole(value as "buyer" | "store_owner")}
-              className="flex flex-col space-y-2"
-            >
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="buyer" id="buyer" />
-                <Label htmlFor="buyer">Buyer</Label>
-              </div>
-              <div className="flex items-center space-x-2">
-                <RadioGroupItem value="store_owner" id="store_owner" />
-                <Label htmlFor="store_owner">Store Owner</Label>
-              </div>
-            </RadioGroup>
-          </div>
-        </div>
-      );
-    }
-
-    return (
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="name">Full Name</Label>
-          <Input id="name" placeholder="Enter your full name" required />
-        </div>
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" type="email" placeholder="Enter your email" required />
-        </div>
-        {userRole === "buyer" ? (
-          <div className="space-y-2">
-            <Label htmlFor="username">Username</Label>
-            <Input id="username" placeholder="Choose a username" required />
-          </div>
-        ) : (
-          <>
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone Number</Label>
-              <Input id="phone" type="tel" placeholder="Enter your phone number" required />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" placeholder="Enter your store address" required />
-            </div>
-          </>
-        )}
-        <div className="space-y-2">
-          <Label htmlFor="password">Password</Label>
-          <Input 
-            id="password" 
-            type="password" 
-            placeholder="Create a password" 
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required 
-          />
-          <PasswordStrength password={password} />
-        </div>
-        <div className="flex justify-between items-center">
-          <Button 
-            type="button" 
-            variant="ghost" 
-            onClick={() => {
-              setUserRole(null);
-              setPassword("");
-            }}
-          >
-            Back
-          </Button>
-          <Button type="submit">Register</Button>
-        </div>
-      </form>
-    );
-  };
-
-  const ForgotPasswordForm = () => (
-    <form onSubmit={handleForgotPassword} className="space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="reset-email">Email</Label>
-        <Input 
-          id="reset-email" 
-          type="email" 
-          placeholder="Enter your email" 
-          value={resetEmail}
-          onChange={(e) => setResetEmail(e.target.value)}
-          required 
-        />
-      </div>
-      <div className="flex justify-between items-center">
-        <Button 
-          type="button" 
-          variant="ghost" 
-          onClick={() => setView("login")}
-        >
-          Back to Login
-        </Button>
-        <Button type="submit">Send Reset Link</Button>
-      </div>
-    </form>
+  const [view, setView] = useState<AuthView>(
+    defaultTab === "register" ? "register_phone" : "login",
   );
 
-  const ResetPasswordForm = () => (
-    <form onSubmit={handleResetPassword} className="space-y-4">
-      <div className="space-y-2">
-        <Label>Verification Code</Label>
-        <InputOTP
-          value={otp}
-          onChange={(value) => setOtp(value)}
-          maxLength={6}
-          render={({ slots }) => (
-            <InputOTPGroup>
-              {slots.map((slot, index) => (
-                <InputOTPSlot key={index} {...slot} />
-              ))}
-            </InputOTPGroup>
-          )}
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="new-password">New Password</Label>
-        <Input 
-          id="new-password" 
-          type="password" 
-          placeholder="Enter new password" 
-          value={password}
-          onChange={(e) => setPassword(e.target.value)}
-          required 
-        />
-        <PasswordStrength password={password} />
-      </div>
-      <div className="flex justify-between items-center">
-        <Button 
-          type="button" 
-          variant="ghost" 
-          onClick={() => setView("forgot_password")}
-        >
-          Back
-        </Button>
-        <Button type="submit">Reset Password</Button>
-      </div>
-    </form>
+  const [phone, setPhone] = useState("");
+  const [password, setPassword] = useState("");
+  const [otp, setOtp] = useState("");
+  // "user" maps to groceror's entity_type="user" (buyer); "store" = store owner
+  const [entityType, setEntityType] = useState<"user" | "store">("user");
+  const [isLoading, setIsLoading] = useState(false);
+
+  function resetAndClose() {
+    setPhone("");
+    setPassword("");
+    setOtp("");
+    setEntityType("user");
+    setIsLoading(false);
+    setView("login");
+    onOpenChange(false);
+  }
+
+  // ---- Login ------------------------------------------------------------------
+
+  async function handleLogin(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      const res = await apiRequest("POST", "/user/login", { phone, password });
+      const data = await res.json();
+      setAuthToken(data.token);
+      toast({ title: "Logged in", description: "Welcome back!" });
+      resetAndClose();
+    } catch (err: any) {
+      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- Register step 1: send OTP ----------------------------------------------
+
+  async function handleRegisterSendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/user/send-otp", { phone });
+      setView("register_otp");
+    } catch (err: any) {
+      toast({ title: "Could not send OTP", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- Register step 2: verify OTP --------------------------------------------
+
+  async function handleRegisterVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/user/verify-otp", { phone, otp });
+      setOtp("");
+      setView("register_password");
+    } catch (err: any) {
+      toast({ title: "OTP verification failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- Register step 3: register + auto-login ---------------------------------
+
+  async function handleRegister(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/user/register", {
+        phone,
+        entity_type: entityType,
+        password,
+      });
+      // Auto-login so the user lands in an authenticated state immediately.
+      const loginRes = await apiRequest("POST", "/user/login", { phone, password });
+      const { token } = await loginRes.json();
+      setAuthToken(token);
+      toast({ title: "Account created!", description: "You're now logged in." });
+      resetAndClose();
+    } catch (err: any) {
+      toast({ title: "Registration failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- Forgot password step 1: send OTP ---------------------------------------
+
+  async function handleForgotSendOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/user/send-otp", { phone });
+      setView("forgot_otp");
+    } catch (err: any) {
+      toast({ title: "Could not send OTP", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- Forgot password step 2: verify OTP -------------------------------------
+  // Groceror's change-password endpoint requires an active JWT, so a full
+  // unauthenticated reset flow needs a backend endpoint.  For now we verify
+  // identity via OTP and ask the user to log in then update their password.
+
+  async function handleForgotVerifyOtp(e: React.FormEvent) {
+    e.preventDefault();
+    setIsLoading(true);
+    try {
+      await apiRequest("POST", "/user/verify-otp", { phone, otp });
+      toast({
+        title: "Identity verified",
+        description:
+          "Please log in with your current password and update it from account settings.",
+      });
+      setOtp("");
+      setPhone("");
+      setView("login");
+    } catch (err: any) {
+      toast({ title: "OTP verification failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // ---- OTP input (shared between register and forgot flows) -------------------
+
+  const OtpInput = () => (
+    <InputOTP value={otp} onChange={setOtp} maxLength={6}>
+      <InputOTPGroup>
+        {[...Array(6)].map((_, i) => (
+          <InputOTPSlot key={i} index={i} />
+        ))}
+      </InputOTPGroup>
+    </InputOTP>
   );
 
   return (
-    <Dialog open={isOpen} onOpenChange={(open) => {
-      if (!open) {
-        setPassword("");
-        setResetEmail("");
-        setOtp("");
-        setView("login");
-      }
-      onOpenChange(open);
-    }}>
+    <Dialog open={isOpen} onOpenChange={(open) => { if (!open) resetAndClose(); }}>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle className="text-center">
-            {view === "forgot_password" 
-              ? "Reset Password" 
-              : view === "reset_password"
-              ? "Enter New Password"
-              : activeTab === "login" 
-              ? "Welcome Back" 
-              : "Create Account"}
-          </DialogTitle>
+          <DialogTitle className="text-center">{TITLES[view]}</DialogTitle>
         </DialogHeader>
-        {view === "forgot_password" ? (
-          <ForgotPasswordForm />
-        ) : view === "reset_password" ? (
-          <ResetPasswordForm />
-        ) : (
-          <Tabs value={activeTab} onValueChange={(v) => {
-            setActiveTab(v as "login" | "register");
-            setUserRole(null);
-            setPassword("");
-          }}>
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="login">Login</TabsTrigger>
-              <TabsTrigger value="register">Register</TabsTrigger>
-            </TabsList>
-            <TabsContent value="login">
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="login-email">Email</Label>
-                  <Input id="login-email" type="email" placeholder="Enter your email" required />
+
+        {/* ---- LOGIN -------------------------------------------------------- */}
+        {view === "login" && (
+          <form onSubmit={handleLogin} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="login-phone">Phone Number</Label>
+              <Input
+                id="login-phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="login-password">Password</Label>
+              <Input
+                id="login-password"
+                type="password"
+                placeholder="Enter your password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <Button
+                type="button"
+                variant="link"
+                className="px-0 font-normal"
+                onClick={() => { setPhone(""); setView("forgot_phone"); }}
+              >
+                Forgot password?
+              </Button>
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Logging in…" : "Login"}
+            </Button>
+            <p className="text-center text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Button
+                type="button"
+                variant="link"
+                className="h-auto px-0 font-normal"
+                onClick={() => { setPhone(""); setPassword(""); setView("register_phone"); }}
+              >
+                Register
+              </Button>
+            </p>
+          </form>
+        )}
+
+        {/* ---- REGISTER STEP 1: phone + role -------------------------------- */}
+        {view === "register_phone" && (
+          <form onSubmit={handleRegisterSendOtp} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="reg-phone">Phone Number</Label>
+              <Input
+                id="reg-phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>I am a</Label>
+              <RadioGroup
+                value={entityType}
+                onValueChange={(v) => setEntityType(v as "user" | "store")}
+                className="flex flex-col space-y-2"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="user" id="role-user" />
+                  <Label htmlFor="role-user">Buyer</Label>
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="login-password">Password</Label>
-                  <Input 
-                    id="login-password" 
-                    type="password" 
-                    placeholder="Enter your password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required 
-                  />
-                  <Button 
-                    type="button" 
-                    variant="link" 
-                    className="px-0 font-normal"
-                    onClick={() => setView("forgot_password")}
-                  >
-                    Forgot password?
-                  </Button>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="store" id="role-store" />
+                  <Label htmlFor="role-store">Store Owner</Label>
                 </div>
-                <Button type="submit" className="w-full">
-                  Login
-                </Button>
-              </form>
-            </TabsContent>
-            <TabsContent value="register">
-              <RegisterForm />
-            </TabsContent>
-          </Tabs>
+              </RadioGroup>
+            </div>
+            <div className="flex justify-between">
+              <Button
+                type="button"
+                variant="ghost"
+                onClick={() => { setPhone(""); setView("login"); }}
+              >
+                Back to Login
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Sending…" : "Send OTP"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ---- REGISTER STEP 2: verify OTP ---------------------------------- */}
+        {view === "register_otp" && (
+          <form onSubmit={handleRegisterVerifyOtp} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter the 6-digit code sent to <strong>{phone}</strong>.
+            </p>
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <OtpInput />
+            </div>
+            <div className="flex justify-between">
+              <Button type="button" variant="ghost" onClick={() => setView("register_phone")}>
+                Back
+              </Button>
+              <Button type="submit" disabled={isLoading || otp.length < 6}>
+                {isLoading ? "Verifying…" : "Verify"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ---- REGISTER STEP 3: set password -------------------------------- */}
+        {view === "register_password" && (
+          <form onSubmit={handleRegister} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Phone verified. Set a password for your{" "}
+              {entityType === "store" ? "store account" : "account"}.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="reg-password">Password</Label>
+              <Input
+                id="reg-password"
+                type="password"
+                placeholder="Create a password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <PasswordStrength password={password} />
+            </div>
+            <Button type="submit" className="w-full" disabled={isLoading}>
+              {isLoading ? "Creating account…" : "Create Account"}
+            </Button>
+          </form>
+        )}
+
+        {/* ---- FORGOT PASSWORD STEP 1: phone -------------------------------- */}
+        {view === "forgot_phone" && (
+          <form onSubmit={handleForgotSendOtp} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter your phone number and we&apos;ll send a verification code.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-phone">Phone Number</Label>
+              <Input
+                id="forgot-phone"
+                type="tel"
+                placeholder="+1234567890"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                required
+              />
+            </div>
+            <div className="flex justify-between">
+              <Button type="button" variant="ghost" onClick={() => setView("login")}>
+                Back to Login
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Sending…" : "Send Code"}
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ---- FORGOT PASSWORD STEP 2: verify OTP --------------------------- */}
+        {view === "forgot_otp" && (
+          <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Enter the 6-digit code sent to <strong>{phone}</strong>.
+            </p>
+            <div className="space-y-2">
+              <Label>Verification Code</Label>
+              <OtpInput />
+            </div>
+            <div className="flex justify-between">
+              <Button type="button" variant="ghost" onClick={() => setView("forgot_phone")}>
+                Back
+              </Button>
+              <Button type="submit" disabled={isLoading || otp.length < 6}>
+                {isLoading ? "Verifying…" : "Verify"}
+              </Button>
+            </div>
+          </form>
         )}
       </DialogContent>
     </Dialog>

@@ -1,60 +1,69 @@
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
-import { type Product } from "@/types/models";
+import { type Product, type GetStoreInventoryResponse } from "@/types/models";
 import { Button } from "@/components/ui/button";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
-import { queryClient } from "@/lib/queryClient";
+import { apiRequest } from "@/lib/queryClient";
 
 export default function Cart() {
   const { state, dispatch } = useCart();
   const { toast } = useToast();
 
-  const { data: products } = useQuery<Product[]>({
-    queryKey: ["/api/products"],
+  // Re-use the same query key as the products page so the result is cached.
+  const { data } = useQuery<GetStoreInventoryResponse>({
+    queryKey: ["/inventory/get-store-inventory"],
   });
 
-  const clearCartMutation = useMutation({
-    mutationFn: async () => {
-      await fetch("/api/cart", {
-        method: "DELETE",
-        credentials: "include",
-      });
-    },
-    onSuccess: () => {
-      dispatch({ type: "CLEAR_CART" });
-      queryClient.invalidateQueries({ queryKey: ["/api/cart"] });
-      toast({
-        title: "Cart cleared",
-        description: "All items have been removed from your cart",
-      });
-    },
-  });
+  const products: Product[] = (data?.inventory ?? []).map((item) => ({
+    id: item.id,
+    name: item.name,
+    description: item.notes ?? "",
+    price: item.price.toFixed(2),
+    category: item.category,
+    imageUrl: "",
+    stock: item.quantity,
+    storeId: item.store_id,
+  }));
 
-  if (!products?.length) {
-    return <div>Loading...</div>;
-  }
-
-  const cartItems = state.items.map(item => {
-    const product = products.find(p => p.id === item.id);
-    return { ...item, product };
-  }).filter((item): item is typeof item & { product: Product } => item.product !== undefined);
+  const cartItems = state.items
+    .map((item) => ({ ...item, product: products.find((p) => p.id === item.id) }))
+    .filter((item): item is typeof item & { product: Product } => item.product !== undefined);
 
   const total = cartItems.reduce(
-    (sum, item) => sum + Number(item.product.price) * item.quantity,
-    0
+    (sum, { product, quantity }) => sum + parseFloat(product.price) * quantity,
+    0,
   );
+
+  function handleClearCart() {
+    // Clear local state immediately.
+    dispatch({ type: "CLEAR_CART" });
+
+    // Best-effort server sync using the store_id from the first cart item.
+    const storeId = cartItems[0]?.product?.storeId;
+    if (storeId) {
+      apiRequest("POST", `/cart/${storeId}/clear`).catch(() => {});
+    }
+
+    toast({ title: "Cart cleared", description: "All items have been removed from your cart" });
+  }
+
+  function handleUpdateQuantity(product: Product, quantity: number) {
+    dispatch({ type: "UPDATE_QUANTITY", payload: { id: product.id, quantity } });
+    apiRequest("PUT", `/cart/${product.storeId}/items/${product.id}`, { quantity }).catch(() => {});
+  }
+
+  function handleRemoveItem(product: Product) {
+    dispatch({ type: "REMOVE_ITEM", payload: product.id });
+    apiRequest("DELETE", `/cart/${product.storeId}/items/${product.id}`).catch(() => {});
+  }
 
   return (
     <div className="max-w-2xl mx-auto">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Shopping Cart</h1>
         {cartItems.length > 0 && (
-          <Button
-            variant="destructive"
-            size="sm"
-            onClick={() => clearCartMutation.mutate()}
-          >
+          <Button variant="destructive" size="sm" onClick={handleClearCart}>
             Clear Cart
           </Button>
         )}
@@ -67,21 +76,10 @@ export default function Cart() {
       ) : (
         <div className="space-y-4">
           {cartItems.map(({ product, quantity }) => (
-            <div
-              key={product.id}
-              className="flex items-center gap-4 p-4 border rounded-lg"
-            >
-              <img
-                src={product.imageUrl}
-                alt={product.name}
-                className="w-16 h-16 object-cover rounded"
-              />
-
+            <div key={product.id} className="flex items-center gap-4 p-4 border rounded-lg">
               <div className="flex-1">
                 <h3 className="font-medium">{product.name}</h3>
-                <p className="text-sm text-muted-foreground">
-                  ${product.price} each
-                </p>
+                <p className="text-sm text-muted-foreground">${product.price} each</p>
               </div>
 
               <div className="flex items-center gap-2">
@@ -89,12 +87,7 @@ export default function Cart() {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() =>
-                    dispatch({
-                      type: "UPDATE_QUANTITY",
-                      payload: { id: product.id, quantity: quantity - 1 },
-                    })
-                  }
+                  onClick={() => handleUpdateQuantity(product, quantity - 1)}
                   disabled={quantity <= 1}
                 >
                   <Minus className="h-4 w-4" />
@@ -106,12 +99,7 @@ export default function Cart() {
                   variant="outline"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() =>
-                    dispatch({
-                      type: "UPDATE_QUANTITY",
-                      payload: { id: product.id, quantity: quantity + 1 },
-                    })
-                  }
+                  onClick={() => handleUpdateQuantity(product, quantity + 1)}
                   disabled={quantity >= product.stock}
                 >
                   <Plus className="h-4 w-4" />
@@ -121,9 +109,7 @@ export default function Cart() {
                   variant="destructive"
                   size="icon"
                   className="h-8 w-8"
-                  onClick={() =>
-                    dispatch({ type: "REMOVE_ITEM", payload: product.id })
-                  }
+                  onClick={() => handleRemoveItem(product)}
                 >
                   <Trash2 className="h-4 w-4" />
                 </Button>
@@ -136,10 +122,7 @@ export default function Cart() {
               <span className="font-medium">Total</span>
               <span className="text-lg font-bold">${total.toFixed(2)}</span>
             </div>
-
-            <Button className="w-full">
-              Proceed to Checkout
-            </Button>
+            <Button className="w-full">Proceed to Checkout</Button>
           </div>
         </div>
       )}

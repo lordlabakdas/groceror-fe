@@ -23,7 +23,7 @@ export default function Home() {
     >
       <div className="max-w-4xl mx-auto px-4 text-center">
         <h1 className="text-5xl md:text-6xl font-bold mb-6 text-white">
-          Groceror - Your neighborhood grocery sorceror!
+          Groceror!
         </h1>
         <p className="text-xl md:text-2xl mb-8 text-gray-100 max-w-2xl mx-auto"></p>
         <div className="flex gap-4 justify-center">

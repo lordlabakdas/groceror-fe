@@ -1,14 +1,15 @@
 import { Button } from "@/components/ui/button";
 
-const categories = [
+// Matches groceror's InventoryCategory enum values (display labels).
+export const GROCEROR_CATEGORIES = [
   "All",
-  "Fruits",
-  "Vegetables",
-  "Bakery",
-  "Dairy",
+  "Grocery",
+  "Produce",
   "Meat",
-  "Beverages"
-];
+  "Dairy",
+  "Bakery",
+  "Other",
+] as const;
 
 interface CategoriesProps {
   selected: string;
@@ -18,7 +19,7 @@ interface CategoriesProps {
 export function Categories({ selected, onSelect }: CategoriesProps) {
   return (
     <div className="flex gap-2 overflow-x-auto pb-4 scrollbar-none">
-      {categories.map((category) => (
+      {GROCEROR_CATEGORIES.map((category) => (
         <Button
           key={category}
           variant={selected === category ? "default" : "outline"}

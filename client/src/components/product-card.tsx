@@ -20,14 +20,12 @@ export function ProductCard({ product }: { product: Product }) {
           <h3 className="font-semibold truncate">{product.name}</h3>
           <span className="text-green-600 font-medium">${product.price}</span>
         </div>
-        <p className="text-sm text-muted-foreground line-clamp-2">
-          {product.description}
-        </p>
+        <p className="text-sm text-muted-foreground line-clamp-2">{product.description}</p>
       </CardContent>
       <CardFooter className="p-4 pt-0">
-        <Button 
-          className="w-full" 
-          onClick={() => addToCart(product.id)}
+        <Button
+          className="w-full"
+          onClick={() => addToCart(product)}
           disabled={product.stock === 0}
         >
           {product.stock > 0 ? "Add to Cart" : "Out of Stock"}
