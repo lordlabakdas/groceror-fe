@@ -4,10 +4,19 @@ import { useRoute, Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShoppingCart, ChevronLeft, Check } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, Check, MapPin, Globe } from "lucide-react";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { type GetStoreInventoryResponse, type Product } from "@/types/models";
 import { getProductImage } from "@/lib/catalog";
+
+interface StoreDetail {
+  id: string;
+  name: string;
+  email: string;
+  location: string | null;
+  website: string | null;
+  is_active: boolean;
+}
 
 export default function StoreBrowse() {
   const [, params] = useRoute("/stores/:id");
@@ -16,7 +25,12 @@ export default function StoreBrowse() {
   const [search, setSearch] = useState("");
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
 
-  const { data, isLoading } = useQuery<GetStoreInventoryResponse>({
+  const { data: store } = useQuery<StoreDetail>({
+    queryKey: [`/stores/${storeId}`],
+    enabled: !!storeId,
+  });
+
+  const { data: inventoryData, isLoading } = useQuery<GetStoreInventoryResponse>({
     queryKey: [`/inventory/browse/${storeId}`],
     enabled: !!storeId,
   });
@@ -24,7 +38,7 @@ export default function StoreBrowse() {
   const { state: cartState } = useCart();
   const addToCart = useAddToCart();
 
-  const products: Product[] = (data?.inventory ?? []).map((item) => ({
+  const products: Product[] = (inventoryData?.inventory ?? []).map((item) => ({
     id: item.id,
     name: item.name,
     description: item.notes ?? "",
@@ -57,42 +71,67 @@ export default function StoreBrowse() {
     }, 2000);
   }
 
+  const storeName = store?.name ?? "Store";
+
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/stores">
-            <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors">
-              <ChevronLeft className="h-4 w-4" />
-              Stores
-            </a>
-          </Link>
-          <span className="text-muted-foreground">/</span>
-          <h1 className="text-xl font-bold">Shop</h1>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="relative w-full md:w-64">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search items..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="pl-9"
-            />
+      {/* breadcrumb + store header */}
+      <div className="space-y-3">
+        <Link href="/stores">
+          <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
+            <ChevronLeft className="h-4 w-4" />
+            All Stores
+          </a>
+        </Link>
+
+        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-bold">{storeName}</h1>
+            <div className="flex flex-wrap items-center gap-3 mt-1">
+              {store?.location && (
+                <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {store.location}
+                </span>
+              )}
+              {store?.website && (
+                <a
+                  href={store.website.startsWith("http") ? store.website : `https://${store.website}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+                >
+                  <Globe className="h-3.5 w-3.5" />
+                  {store.website}
+                </a>
+              )}
+            </div>
           </div>
-          <Link href="/cart">
-            <a>
-              <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
-                <ShoppingCart className="h-4 w-4" />
-                Cart
-                {cartState.items.length > 0 && (
-                  <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                    {cartState.items.reduce((s, i) => s + i.quantity, 0)}
-                  </Badge>
-                )}
-              </Button>
-            </a>
-          </Link>
+
+          <div className="flex items-center gap-3 flex-shrink-0">
+            <div className="relative w-full md:w-56">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search items..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="pl-9"
+              />
+            </div>
+            <Link href="/cart">
+              <a>
+                <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
+                  <ShoppingCart className="h-4 w-4" />
+                  Cart
+                  {cartState.items.length > 0 && (
+                    <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                      {cartState.items.reduce((s, i) => s + i.quantity, 0)}
+                    </Badge>
+                  )}
+                </Button>
+              </a>
+            </Link>
+          </div>
         </div>
       </div>
 
