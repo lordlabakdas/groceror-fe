@@ -8,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PasswordStrength } from "./password-strength";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth } from "@/lib/auth-context";
+import { useAuth, decodeToken } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 
 interface AuthDialogProps {
@@ -72,7 +72,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
       login(data.token);
       toast({ title: "Logged in", description: "Welcome back!" });
       resetAndClose();
-      setLocation("/products");
+      const decoded = decodeToken(data.token);
+      setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
     } catch (err: any) {
       toast({ title: "Login failed", description: err.message, variant: "destructive" });
     } finally {
@@ -128,7 +129,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
       login(token);
       toast({ title: "Account created!", description: "You're now logged in." });
       resetAndClose();
-      setLocation("/products");
+      const decoded = decodeToken(token);
+      setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
     } catch (err: any) {
       toast({ title: "Registration failed", description: err.message, variant: "destructive" });
     } finally {

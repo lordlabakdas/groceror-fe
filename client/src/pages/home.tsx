@@ -30,7 +30,7 @@ export default function Home() {
   const [, setLocation] = useLocation();
 
   useEffect(() => {
-    if (user) setLocation("/products");
+    if (user) setLocation(user.entityType === "store" ? "/products" : "/stores");
   }, [user, setLocation]);
 
   return (

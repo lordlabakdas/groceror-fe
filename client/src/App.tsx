@@ -11,19 +11,37 @@ import Home from "@/pages/home";
 import Products from "@/pages/products";
 import Cart from "@/pages/cart";
 import Inventory from "@/pages/inventory";
+import Stores from "@/pages/stores";
+import StoreBrowse from "@/pages/store-browse";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
   return user ? <Component /> : <Redirect to="/" />;
 }
 
+function StoreOwnerRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { user } = useAuth();
+  if (!user) return <Redirect to="/" />;
+  if (user.entityType !== "store") return <Redirect to="/stores" />;
+  return <Component />;
+}
+
+function BuyerRoute({ component: Component }: { component: () => JSX.Element }) {
+  const { user } = useAuth();
+  if (!user) return <Redirect to="/" />;
+  if (user.entityType !== "user") return <Redirect to="/products" />;
+  return <Component />;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/" component={Home} />
-      <Route path="/products">{() => <ProtectedRoute component={Products} />}</Route>
-      <Route path="/cart">{() => <ProtectedRoute component={Cart} />}</Route>
-      <Route path="/inventory">{() => <ProtectedRoute component={Inventory} />}</Route>
+      <Route path="/products">{() => <StoreOwnerRoute component={Products} />}</Route>
+      <Route path="/inventory">{() => <StoreOwnerRoute component={Inventory} />}</Route>
+      <Route path="/stores">{() => <BuyerRoute component={Stores} />}</Route>
+      <Route path="/stores/:id">{() => <BuyerRoute component={StoreBrowse} />}</Route>
+      <Route path="/cart">{() => <BuyerRoute component={Cart} />}</Route>
       <Route component={NotFound} />
     </Switch>
   );

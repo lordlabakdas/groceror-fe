@@ -31,7 +31,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Button>
               </SheetTrigger>
               <SheetContent side="left" className="w-64">
-                {user && (
+                {user?.entityType === "store" && (
                   <nav className="flex flex-col gap-1 mt-8">
                     <Link href="/products">
                       <a
@@ -47,6 +47,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
                       >
                         Myventory
+                      </a>
+                    </Link>
+                  </nav>
+                )}
+                {user?.entityType === "user" && (
+                  <nav className="flex flex-col gap-1 mt-8">
+                    <Link href="/stores">
+                      <a
+                        onClick={() => setDrawerOpen(false)}
+                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                      >
+                        Browse
+                      </a>
+                    </Link>
+                    <Link href="/cart">
+                      <a
+                        onClick={() => setDrawerOpen(false)}
+                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                      >
+                        Cart
                       </a>
                     </Link>
                   </nav>
@@ -76,11 +96,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* logo */}
             <Link href="/">
-              <a href={user ? "/products" : "/"} className="text-xl font-bold tracking-tight">groceror</a>
+              <a href={user ? (user.entityType === "store" ? "/products" : "/stores") : "/"} className="text-xl font-bold tracking-tight">groceror</a>
             </Link>
 
-            {/* desktop nav links — only when logged in */}
-            {user && (
+            {/* desktop nav links — role-based */}
+            {user?.entityType === "store" && (
               <nav className="hidden md:flex items-center gap-1 ml-2">
                 <Link href="/products">
                   <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
@@ -90,6 +110,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/inventory">
                   <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
                     Myventory
+                  </a>
+                </Link>
+              </nav>
+            )}
+            {user?.entityType === "user" && (
+              <nav className="hidden md:flex items-center gap-1 ml-2">
+                <Link href="/stores">
+                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
+                    Browse
                   </a>
                 </Link>
               </nav>
@@ -121,8 +150,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
               </Button>
             )}
 
-            {/* cart — only when logged in */}
-            {user && (
+            {/* cart — buyers only */}
+            {user?.entityType === "user" && (
               <Link href="/cart">
                 <a className="relative">
                   <Button variant="outline" size="icon">
