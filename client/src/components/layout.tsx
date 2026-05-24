@@ -90,7 +90,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* logo */}
             <Link href="/">
-              <a href="/" className="text-xl font-bold tracking-tight">groceror</a>
+              <a href={user ? "/products" : "/"} className="text-xl font-bold tracking-tight">groceror</a>
             </Link>
 
             {/* desktop nav links — only when logged in */}
