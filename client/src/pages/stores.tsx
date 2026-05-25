@@ -130,6 +130,7 @@ function MapView({ stores, mappable, centre, zoom }: MapViewProps) {
 
   return (
     <div className="space-y-3">
+      <div style={{ isolation: "isolate" }}>
       <MapContainer
         center={centre}
         zoom={zoom}
@@ -164,6 +165,7 @@ function MapView({ stores, mappable, centre, zoom }: MapViewProps) {
           </Marker>
         ))}
       </MapContainer>
+      </div>
 
       {unmappable.length > 0 && (
         <div className="space-y-2">
