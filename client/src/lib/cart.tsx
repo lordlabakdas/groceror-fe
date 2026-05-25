@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, ReactNode } from "react";
+import { createContext, useContext, useReducer, useState, useEffect, ReactNode } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { type Product } from "@/types/models";
@@ -27,6 +27,9 @@ type CartAction =
 const CartContext = createContext<{
   state: CartState;
   dispatch: React.Dispatch<CartAction>;
+  cartOpen: boolean;
+  openCart: () => void;
+  closeCart: () => void;
 } | null>(null);
 
 function cartReducer(state: CartState, action: CartAction): CartState {
@@ -80,12 +83,25 @@ function loadCart(): CartState {
 
 export function CartProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(cartReducer, undefined, loadCart);
+  const [cartOpen, setCartOpen] = useState(false);
 
   useEffect(() => {
     localStorage.setItem(CART_KEY, JSON.stringify(state));
   }, [state]);
 
-  return <CartContext.Provider value={{ state, dispatch }}>{children}</CartContext.Provider>;
+  return (
+    <CartContext.Provider
+      value={{
+        state,
+        dispatch,
+        cartOpen,
+        openCart: () => setCartOpen(true),
+        closeCart: () => setCartOpen(false),
+      }}
+    >
+      {children}
+    </CartContext.Provider>
+  );
 }
 
 export function useCart() {
