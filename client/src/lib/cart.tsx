@@ -9,7 +9,9 @@ export interface CartItem {
   name: string;
   price: number;
   storeId: string;
+  storeName: string;
   imageUrl: string;
+  stock: number;
 }
 
 interface CartState {
@@ -93,10 +95,21 @@ export function useCart() {
 }
 
 export function useAddToCart() {
-  const { dispatch } = useCart();
+  const { state, dispatch } = useCart();
   const { toast } = useToast();
 
   return (product: Product, quantity: number = 1) => {
+    const existingStoreId = state.items[0]?.storeId;
+    if (existingStoreId && existingStoreId !== product.storeId) {
+      const existingStoreName = state.items[0]?.storeName ?? "another store";
+      toast({
+        title: "Different store",
+        description: `Your cart has items from ${existingStoreName}. Clear your cart before adding items from a new store.`,
+        variant: "destructive",
+      });
+      return;
+    }
+
     dispatch({
       type: "ADD_ITEM",
       payload: {
@@ -105,10 +118,12 @@ export function useAddToCart() {
         name: product.name,
         price: parseFloat(product.price),
         storeId: product.storeId,
+        storeName: product.storeName ?? "",
         imageUrl: product.imageUrl,
+        stock: product.stock,
       },
     });
-    toast({ title: "Added to cart", description: `${quantity} item(s) added to your cart` });
+    toast({ title: "Added to cart", description: `${product.name} added to your cart` });
 
     // Sync to groceror in the background; failures are non-fatal.
     apiRequest("POST", `/cart/${product.storeId}/items`, {

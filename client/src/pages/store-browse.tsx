@@ -47,6 +47,7 @@ export default function StoreBrowse() {
     imageUrl: getProductImage(item.name, item.category),
     stock: item.quantity,
     storeId: item.store_id,
+    storeName: storeName,
   }));
 
   const filtered = products.filter((p) =>

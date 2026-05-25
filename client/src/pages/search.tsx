@@ -122,6 +122,7 @@ export default function SearchPage() {
                           imageUrl: getProductImage(item.name, item.category),
                           stock: item.quantity,
                           storeId: item.store_id,
+                          storeName: item.store_name,
                         },
                         1,
                       )

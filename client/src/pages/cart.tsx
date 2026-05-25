@@ -105,6 +105,7 @@ export default function Cart() {
                   size="icon"
                   className="h-7 w-7"
                   onClick={() => handleUpdateQuantity(item.id, item.storeId, item.quantity + 1)}
+                  disabled={item.quantity >= item.stock}
                 >
                   <Plus className="h-3 w-3" />
                 </Button>

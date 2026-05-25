@@ -25,6 +25,7 @@ export interface Product {
   imageUrl: string;
   stock: number;
   storeId: string;     // groceror store UUID, required by cart endpoints
+  storeName?: string;  // display name of the store, used for cross-store cart warning
 }
 
 export interface CartItem {
