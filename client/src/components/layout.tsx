@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
 import { ProfileSheet } from "@/components/profile-sheet";
+import { CartDrawer } from "@/components/cart-drawer";
 
 function navCls(href: string, current: string, mobile = false) {
   const active = current === href || current.startsWith(href + "/");
@@ -18,7 +19,7 @@ function navCls(href: string, current: string, mobile = false) {
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
-  const { state } = useCart();
+  const { state, cartOpen, openCart, closeCart } = useCart();
   const { user, openLogin, profileOpen, setProfileOpen } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [location] = useLocation();
@@ -76,11 +77,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         Orders
                       </a>
                     </Link>
-                    <Link href="/cart">
-                      <a onClick={() => setDrawerOpen(false)} className={navCls("/cart", location, true)}>
-                        Cart
-                      </a>
-                    </Link>
+                    <button
+                      onClick={() => { setDrawerOpen(false); openCart(); }}
+                      className={navCls("/cart", location, true)}
+                    >
+                      Cart {totalItems > 0 && `(${totalItems})`}
+                    </button>
                   </nav>
                 )}
 
@@ -167,18 +169,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* cart — buyers only */}
             {user?.entityType === "user" && (
-              <Link href="/cart">
-                <a className="relative">
-                  <Button variant="outline" size="icon">
+              <button className="relative" onClick={openCart} aria-label="Open cart">
+                <Button variant="outline" size="icon" asChild>
+                  <span>
                     <ShoppingCart className="h-5 w-5" />
-                  </Button>
-                  {totalItems > 0 && (
-                    <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center font-medium">
-                      {totalItems}
-                    </span>
-                  )}
-                </a>
-              </Link>
+                  </span>
+                </Button>
+                {totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary text-primary-foreground rounded-full w-5 h-5 text-xs flex items-center justify-center font-medium">
+                    {totalItems}
+                  </span>
+                )}
+              </button>
             )}
           </div>
         </div>
@@ -189,6 +191,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
       </main>
 
       <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
+      <CartDrawer open={cartOpen} onClose={closeCart} />
     </div>
   );
 }

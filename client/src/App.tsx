@@ -9,7 +9,6 @@ import { Layout } from "./components/layout";
 import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Products from "@/pages/products";
-import Cart from "@/pages/cart";
 import Inventory from "@/pages/inventory";
 import Stores from "@/pages/stores";
 import StoreBrowse from "@/pages/store-browse";
@@ -47,8 +46,7 @@ function Router() {
       <Route path="/stores/:id">{() => <BuyerRoute component={StoreBrowse} />}</Route>
       <Route path="/search">{() => <BuyerRoute component={SearchPage} />}</Route>
       <Route path="/orders">{() => <BuyerRoute component={Orders} />}</Route>
-      <Route path="/cart">{() => <BuyerRoute component={Cart} />}</Route>
-      <Route component={NotFound} />
+<Route component={NotFound} />
     </Switch>
   );
 }
