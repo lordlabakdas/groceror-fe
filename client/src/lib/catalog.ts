@@ -45,6 +45,7 @@ export const CATALOG: CatalogItem[] = [
 
 const _nameToImage = new Map(CATALOG.map((c) => [c.name.toLowerCase(), c.imageUrl]));
 
-export function getProductImage(name: string, categoryEnum: string): string {
+export function getProductImage(name: string | undefined, categoryEnum: string): string {
+  if (!name) return CATEGORY_IMAGES[categoryEnum] ?? CATEGORY_IMAGES.OTHER;
   return _nameToImage.get(name.toLowerCase()) ?? CATEGORY_IMAGES[categoryEnum] ?? CATEGORY_IMAGES.OTHER;
 }

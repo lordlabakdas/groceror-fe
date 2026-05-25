@@ -66,7 +66,12 @@ export function clearPersistedCart() {
 function loadCart(): CartState {
   try {
     const raw = localStorage.getItem(CART_KEY);
-    if (raw) return JSON.parse(raw) as CartState;
+    if (raw) {
+      const parsed = JSON.parse(raw) as CartState;
+      // Drop items persisted before CartItem gained name/price/storeId fields.
+      const valid = parsed.items.filter((i) => i.name && i.storeId);
+      return { items: valid };
+    }
   } catch {}
   return { items: [] };
 }
