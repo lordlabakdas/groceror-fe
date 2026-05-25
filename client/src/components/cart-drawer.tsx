@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
@@ -356,15 +356,24 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
     }`;
 
   async function handlePlaceOrder() {
-    // Touch all fields to reveal any validation errors
     setTouched({ cardNumber: true, expiry: true, cvv: true, nameOnCard: true });
     if (hasErrors) return;
-
     setSubmitting(true);
     setApiError(null);
     try {
-      // Task 5 will replace this with the real API call
+      const { apiRequest } = await import("@/lib/queryClient");
+      const orderItems = items.flatMap(({ id, quantity }) =>
+        Array<string>(quantity).fill(id)
+      );
+      await apiRequest("POST", "/order/create-order", {
+        items: orderItems,
+        total_price: total,
+        status: "pending",
+      });
       onSuccess();
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Order failed. Please try again.";
+      setApiError(message);
     } finally {
       setSubmitting(false);
     }
@@ -521,7 +530,9 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
 
         {/* API error */}
         {apiError && (
-          <p className="text-destructive text-sm text-center">{apiError}</p>
+          <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5">
+            {apiError}
+          </p>
         )}
       </div>
 
@@ -555,25 +566,54 @@ interface ConfirmationViewProps {
   onClose: () => void;
 }
 
-function ConfirmationView({ onClose }: ConfirmationViewProps) {
+function ConfirmationView({ storeName, onClose }: ConfirmationViewProps) {
+  const [, setLocation] = useLocation();
+
   return (
     <>
-      {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-900 to-emerald-700 px-4 py-4 flex items-center justify-between shrink-0">
-        <h2 className="text-white text-lg font-semibold">Order Confirmed</h2>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-emerald-200 hover:text-white hover:bg-emerald-800/60 h-8 w-8"
-          onClick={onClose}
-        >
-          <X className="h-4 w-4" />
-        </Button>
+      {/* Header — centred, no close button */}
+      <div className="bg-gradient-to-br from-[#0a2614] to-emerald-700 text-white px-4 py-4 text-center flex-shrink-0">
+        <h2 className="font-bold text-base">Order Confirmed</h2>
       </div>
 
-      {/* Placeholder body */}
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        Confirmation — Task 5
+      <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center text-center gap-4">
+        {/* Animated checkmark */}
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-300 flex items-center justify-center shadow-lg animate-bounce">
+          <span className="text-3xl text-emerald-700">✓</span>
+        </div>
+
+        <div>
+          <h3 className="font-bold text-xl">You're all set!</h3>
+          {storeName && (
+            <p className="text-sm text-muted-foreground mt-1">{storeName}</p>
+          )}
+        </div>
+
+        <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-left">
+          <p className="text-xs font-bold text-emerald-800 mb-1.5">What happens next</p>
+          <p className="text-sm text-muted-foreground leading-relaxed">
+            {storeName || "The store"} will confirm your order. Head to{" "}
+            <span className="text-emerald-700 font-semibold">Orders</span> to track its status.
+          </p>
+        </div>
+
+        <div className="w-full space-y-3 mt-2">
+          <Button
+            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+            onClick={() => {
+              setLocation("/orders");
+              onClose();
+            }}
+          >
+            View my orders
+          </Button>
+          <button
+            className="text-sm text-emerald-700 font-semibold hover:underline"
+            onClick={onClose}
+          >
+            Continue shopping
+          </button>
+        </div>
       </div>
     </>
   );
