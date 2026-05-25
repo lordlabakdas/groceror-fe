@@ -74,7 +74,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             storeName={storeName}
             onClose={handleClose}
             onBack={() => setDrawerState("cart")}
-            onSuccess={() => setDrawerState("confirmation")}
+            onSuccess={() => {
+              dispatch({ type: "CLEAR_CART" });
+              setDrawerState("confirmation");
+            }}
           />
         )}
         {drawerState === "confirmation" && (
