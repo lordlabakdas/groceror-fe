@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { ShoppingBasket, BarChart3, Smartphone } from "lucide-react";
+import { ShoppingBasket, BarChart3, Smartphone, Store, ShoppingCart } from "lucide-react";
 
 const FEATURES = [
   {
@@ -127,6 +127,53 @@ export default function Home() {
               fill="hsl(var(--background))"
             />
           </svg>
+        </div>
+      </section>
+
+      {/* ── Choose your path ─────────────────────────────────── */}
+      <section className="bg-background py-16 px-4 border-b">
+        <div className="max-w-3xl mx-auto">
+          <div className="text-center mb-10">
+            <p className="text-sm font-semibold tracking-widest text-primary uppercase mb-2">
+              Get started
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold">Who are you here for?</h2>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="rounded-2xl border-2 bg-card p-8 hover:border-primary hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 flex flex-col">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 text-primary mb-5">
+                <Store className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">I'm a Grocer</h3>
+              <p className="text-muted-foreground leading-relaxed mb-6 flex-1">
+                List your products, manage stock levels, and reach shoppers in your area — all from one clean dashboard.
+              </p>
+              <Button className="w-full" onClick={() => openLogin("register", "store")}>
+                Start as Grocer
+              </Button>
+            </div>
+            <div className="rounded-2xl border-2 bg-card p-8 hover:border-primary hover:shadow-xl hover:shadow-primary/10 transition-all duration-300 flex flex-col">
+              <div className="inline-flex items-center justify-center w-14 h-14 rounded-xl bg-primary/10 text-primary mb-5">
+                <ShoppingCart className="h-7 w-7" />
+              </div>
+              <h3 className="text-xl font-bold mb-2">I'm a Shopper</h3>
+              <p className="text-muted-foreground leading-relaxed mb-6 flex-1">
+                Browse nearby stores, find fresh products, and add them to your cart — checkout in seconds.
+              </p>
+              <Button variant="outline" className="w-full" onClick={() => openLogin("register", "user")}>
+                Start Shopping
+              </Button>
+            </div>
+          </div>
+          <p className="text-center text-sm text-muted-foreground mt-6">
+            Already have an account?{" "}
+            <button
+              className="text-primary hover:underline font-medium"
+              onClick={() => openLogin("login")}
+            >
+              Log in
+            </button>
+          </p>
         </div>
       </section>
 

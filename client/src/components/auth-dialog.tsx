@@ -15,6 +15,7 @@ interface AuthDialogProps {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;
   defaultTab?: "login" | "register";
+  defaultEntityType?: "user" | "store";
 }
 
 // Each value is one screen in the dialog.
@@ -35,7 +36,7 @@ const TITLES: Record<AuthView, string> = {
   forgot_otp: "Enter Verification Code",
 };
 
-export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthDialogProps) {
+export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", defaultEntityType = "user" }: AuthDialogProps) {
   const { toast } = useToast();
   const { login } = useAuth();
   const [, setLocation] = useLocation();
@@ -48,7 +49,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login" }: AuthD
   const [password, setPassword] = useState("");
   const [otp, setOtp] = useState("");
   // "user" maps to groceror's entity_type="user" (shopper); "store" = grocer
-  const [entityType, setEntityType] = useState<"user" | "store">("user");
+  const [entityType, setEntityType] = useState<"user" | "store">(defaultEntityType);
   const [isLoading, setIsLoading] = useState(false);
 
   function resetAndClose() {

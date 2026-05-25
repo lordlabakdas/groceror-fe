@@ -49,13 +49,14 @@ function Router() {
 
 // Reads dialog state from AuthContext and renders the single shared AuthDialog.
 function AuthDialogBridge() {
-  const { dialogOpen, dialogTab, setDialogOpen } = useAuth();
+  const { dialogOpen, dialogTab, dialogEntityType, setDialogOpen } = useAuth();
   return (
     <AuthDialog
-      key={dialogTab}
+      key={`${dialogTab}-${dialogEntityType}`}
       isOpen={dialogOpen}
       onOpenChange={setDialogOpen}
       defaultTab={dialogTab}
+      defaultEntityType={dialogEntityType}
     />
   );
 }

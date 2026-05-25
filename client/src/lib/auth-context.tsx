@@ -36,10 +36,11 @@ interface AuthContextValue {
   login: (token: string) => void;
   logout: () => void;
   /** Open the auth dialog from anywhere in the app. */
-  openLogin: (tab?: "login" | "register") => void;
+  openLogin: (tab?: "login" | "register", entityType?: "user" | "store") => void;
   // Dialog state — consumed by AuthDialog via this context.
   dialogOpen: boolean;
   dialogTab: "login" | "register";
+  dialogEntityType: "user" | "store";
   setDialogOpen: (open: boolean) => void;
 }
 
@@ -50,6 +51,7 @@ const AuthContext = createContext<AuthContextValue>({
   openLogin: () => {},
   dialogOpen: false,
   dialogTab: "login",
+  dialogEntityType: "user",
   setDialogOpen: () => {},
 });
 
@@ -57,6 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<CurrentUser | null>(initUser);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"login" | "register">("login");
+  const [dialogEntityType, setDialogEntityType] = useState<"user" | "store">("user");
   const [, setLocation] = useLocation();
 
   const login = useCallback((token: string) => {
@@ -71,14 +74,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLocation("/");
   }, [setLocation]);
 
-  const openLogin = useCallback((tab: "login" | "register" = "login") => {
+  const openLogin = useCallback((tab: "login" | "register" = "login", entityType: "user" | "store" = "user") => {
     setDialogTab(tab);
+    setDialogEntityType(entityType);
     setDialogOpen(true);
   }, []);
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, openLogin, dialogOpen, dialogTab, setDialogOpen }}
+      value={{ user, login, logout, openLogin, dialogOpen, dialogTab, dialogEntityType, setDialogOpen }}
     >
       {children}
     </AuthContext.Provider>
