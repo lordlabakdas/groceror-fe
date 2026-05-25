@@ -35,7 +35,7 @@ export default function StoreBrowse() {
     enabled: !!storeId,
   });
 
-  const { state: cartState } = useCart();
+  const { state: cartState, openCart } = useCart();
   const addToCart = useAddToCart();
 
   const products: Product[] = (inventoryData?.inventory ?? []).map((item) => ({
@@ -119,19 +119,20 @@ export default function StoreBrowse() {
                 className="pl-9"
               />
             </div>
-            <Link href="/cart">
-              <a>
-                <Button variant="outline" size="sm" className="gap-2 flex-shrink-0">
-                  <ShoppingCart className="h-4 w-4" />
-                  Cart
-                  {cartState.items.length > 0 && (
-                    <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                      {cartState.items.reduce((s, i) => s + i.quantity, 0)}
-                    </Badge>
-                  )}
-                </Button>
-              </a>
-            </Link>
+            <Button
+              variant="outline"
+              size="sm"
+              className="gap-2 flex-shrink-0"
+              onClick={openCart}
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Cart
+              {cartState.items.length > 0 && (
+                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+                  {cartState.items.reduce((s, i) => s + i.quantity, 0)}
+                </Badge>
+              )}
+            </Button>
           </div>
         </div>
       </div>
