@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useAddToCart } from "@/lib/cart";
+import { getProductImage } from "@/lib/catalog";
 
 interface SearchResultItem {
   id: string;
@@ -118,7 +119,7 @@ export default function SearchPage() {
                           price: item.price.toFixed(2),
                           category: item.category,
                           description: item.notes ?? "",
-                          imageUrl: "",
+                          imageUrl: getProductImage(item.name, item.category),
                           stock: item.quantity,
                           storeId: item.store_id,
                         },
