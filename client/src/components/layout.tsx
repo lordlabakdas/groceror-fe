@@ -7,6 +7,16 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
 import { ProfileSheet } from "@/components/profile-sheet";
 
+function navCls(href: string, current: string, mobile = false) {
+  const active = current === href || current.startsWith(href + "/");
+  const base = mobile
+    ? "block px-3 py-2 rounded-md text-base font-medium transition-colors"
+    : "px-3 py-1.5 rounded-md text-sm font-medium transition-colors";
+  return active
+    ? `${base} bg-emerald-50 text-emerald-800 font-semibold dark:bg-emerald-950/40 dark:text-emerald-300`
+    : `${base} text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30`;
+}
+
 export function Layout({ children }: { children: React.ReactNode }) {
   const { state } = useCart();
   const { user, openLogin, profileOpen, setProfileOpen } = useAuth();
@@ -33,18 +43,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {user?.entityType === "store" && (
                   <nav className="flex flex-col gap-1 mt-8">
                     <Link href="/products">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/products", location, true)}>
                         Products
                       </a>
                     </Link>
                     <Link href="/inventory">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/inventory", location, true)}>
                         Myventory
                       </a>
                     </Link>
@@ -53,34 +57,22 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 {user?.entityType === "user" && (
                   <nav className="flex flex-col gap-1 mt-8">
                     <Link href="/stores">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/stores", location, true)}>
                         Browse
                       </a>
                     </Link>
                     <Link href="/search">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/search", location, true)}>
                         Search
                       </a>
                     </Link>
                     <Link href="/orders">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/orders", location, true)}>
                         Orders
                       </a>
                     </Link>
                     <Link href="/cart">
-                      <a
-                        onClick={() => setDrawerOpen(false)}
-                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
-                      >
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/cart", location, true)}>
                         Cart
                       </a>
                     </Link>
@@ -118,33 +110,23 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {user?.entityType === "store" && (
               <nav className="hidden md:flex items-center gap-1 ml-2">
                 <Link href="/products">
-                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                    Products
-                  </a>
+                  <a className={navCls("/products", location)}>Products</a>
                 </Link>
                 <Link href="/inventory">
-                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                    Myventory
-                  </a>
+                  <a className={navCls("/inventory", location)}>Myventory</a>
                 </Link>
               </nav>
             )}
             {user?.entityType === "user" && (
               <nav className="hidden md:flex items-center gap-1 ml-2">
                 <Link href="/stores">
-                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                    Browse
-                  </a>
+                  <a className={navCls("/stores", location)}>Browse</a>
                 </Link>
                 <Link href="/search">
-                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                    Search
-                  </a>
+                  <a className={navCls("/search", location)}>Search</a>
                 </Link>
                 <Link href="/orders">
-                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
-                    Orders
-                  </a>
+                  <a className={navCls("/orders", location)}>Orders</a>
                 </Link>
               </nav>
             )}
