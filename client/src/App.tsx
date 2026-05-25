@@ -14,6 +14,7 @@ import Inventory from "@/pages/inventory";
 import Stores from "@/pages/stores";
 import StoreBrowse from "@/pages/store-browse";
 import Orders from "@/pages/orders";
+import SearchPage from "@/pages/search";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
@@ -42,6 +43,7 @@ function Router() {
       <Route path="/inventory">{() => <StoreOwnerRoute component={Inventory} />}</Route>
       <Route path="/stores">{() => <BuyerRoute component={Stores} />}</Route>
       <Route path="/stores/:id">{() => <BuyerRoute component={StoreBrowse} />}</Route>
+      <Route path="/search">{() => <BuyerRoute component={SearchPage} />}</Route>
       <Route path="/orders">{() => <BuyerRoute component={Orders} />}</Route>
       <Route path="/cart">{() => <BuyerRoute component={Cart} />}</Route>
       <Route component={NotFound} />
