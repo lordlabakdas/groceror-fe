@@ -3,12 +3,21 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { type Product } from "@/types/models";
 
+export interface CartItem {
+  id: string;
+  quantity: number;
+  name: string;
+  price: number;
+  storeId: string;
+  imageUrl: string;
+}
+
 interface CartState {
-  items: { id: string; quantity: number }[];
+  items: CartItem[];
 }
 
 type CartAction =
-  | { type: "ADD_ITEM"; payload: { id: string; quantity: number } }
+  | { type: "ADD_ITEM"; payload: CartItem }
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "CLEAR_CART" };
@@ -83,8 +92,17 @@ export function useAddToCart() {
   const { toast } = useToast();
 
   return (product: Product, quantity: number = 1) => {
-    // Update local state immediately for instant feedback.
-    dispatch({ type: "ADD_ITEM", payload: { id: product.id, quantity } });
+    dispatch({
+      type: "ADD_ITEM",
+      payload: {
+        id: product.id,
+        quantity,
+        name: product.name,
+        price: parseFloat(product.price),
+        storeId: product.storeId,
+        imageUrl: product.imageUrl,
+      },
+    });
     toast({ title: "Added to cart", description: `${quantity} item(s) added to your cart` });
 
     // Sync to groceror in the background; failures are non-fatal.

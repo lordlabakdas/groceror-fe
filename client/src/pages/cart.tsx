@@ -1,79 +1,48 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Link } from "wouter";
 import { useCart } from "@/lib/cart";
-import { type Product, type GetStoreInventoryResponse } from "@/types/models";
 import { Button } from "@/components/ui/button";
-import { Minus, Plus, Trash2 } from "lucide-react";
+import { Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { getProductImage } from "@/lib/catalog";
 
 export default function Cart() {
   const { state, dispatch } = useCart();
   const { toast } = useToast();
   const [isCheckingOut, setIsCheckingOut] = useState(false);
 
-  // Re-use the same query key as the products page so the result is cached.
-  const { data } = useQuery<GetStoreInventoryResponse>({
-    queryKey: ["/inventory/get-store-inventory"],
-  });
+  const items = state.items;
+  const total = items.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  const products: Product[] = (data?.inventory ?? []).map((item) => ({
-    id: item.id,
-    name: item.name,
-    description: item.notes ?? "",
-    price: item.price.toFixed(2),
-    category: item.category,
-    imageUrl: "",
-    stock: item.quantity,
-    storeId: item.store_id,
-  }));
+  function handleUpdateQuantity(id: string, storeId: string, quantity: number) {
+    dispatch({ type: "UPDATE_QUANTITY", payload: { id, quantity } });
+    apiRequest("PUT", `/cart/${storeId}/items/${id}`, { quantity }).catch(() => {});
+  }
 
-  const cartItems = state.items
-    .map((item) => ({ ...item, product: products.find((p) => p.id === item.id) }))
-    .filter((item): item is typeof item & { product: Product } => item.product !== undefined);
-
-  const total = cartItems.reduce(
-    (sum, { product, quantity }) => sum + parseFloat(product.price) * quantity,
-    0,
-  );
+  function handleRemoveItem(id: string, storeId: string) {
+    dispatch({ type: "REMOVE_ITEM", payload: id });
+    apiRequest("DELETE", `/cart/${storeId}/items/${id}`).catch(() => {});
+  }
 
   function handleClearCart() {
-    // Clear local state immediately.
+    const storeId = items[0]?.storeId;
     dispatch({ type: "CLEAR_CART" });
-
-    // Best-effort server sync using the store_id from the first cart item.
-    const storeId = cartItems[0]?.product?.storeId;
-    if (storeId) {
-      apiRequest("POST", `/cart/${storeId}/clear`).catch(() => {});
-    }
-
-    toast({ title: "Cart cleared", description: "All items have been removed from your cart" });
-  }
-
-  function handleUpdateQuantity(product: Product, quantity: number) {
-    dispatch({ type: "UPDATE_QUANTITY", payload: { id: product.id, quantity } });
-    apiRequest("PUT", `/cart/${product.storeId}/items/${product.id}`, { quantity }).catch(() => {});
-  }
-
-  function handleRemoveItem(product: Product) {
-    dispatch({ type: "REMOVE_ITEM", payload: product.id });
-    apiRequest("DELETE", `/cart/${product.storeId}/items/${product.id}`).catch(() => {});
+    if (storeId) apiRequest("POST", `/cart/${storeId}/clear`).catch(() => {});
+    toast({ title: "Cart cleared" });
   }
 
   async function handleCheckout() {
     setIsCheckingOut(true);
     try {
-      // Repeat each item UUID by its quantity so the analytics pipeline counts correctly.
-      const items = cartItems.flatMap(({ product, quantity }) =>
-        Array(quantity).fill(product.id),
-      );
+      const orderItems = items.flatMap(({ id, quantity }) => Array(quantity).fill(id));
       await apiRequest("POST", "/order/create-order", {
-        items,
+        items: orderItems,
         total_price: total,
         status: "pending",
       });
       dispatch({ type: "CLEAR_CART" });
-      toast({ title: "Order placed!", description: `$${total.toFixed(2)} order is confirmed.` });
+      toast({ title: "Order placed!", description: `$${total.toFixed(2)} order confirmed.` });
     } catch (err: any) {
       toast({ title: "Checkout failed", description: err.message, variant: "destructive" });
     } finally {
@@ -81,76 +50,95 @@ export default function Cart() {
     }
   }
 
+  if (items.length === 0) {
+    return (
+      <div className="max-w-2xl mx-auto flex flex-col items-center justify-center py-24 gap-4">
+        <ShoppingCart className="h-16 w-16 text-muted-foreground/30" />
+        <p className="text-lg font-medium text-muted-foreground">Your cart is empty</p>
+        <Link href="/stores">
+          <a>
+            <Button variant="outline">Browse stores</Button>
+          </a>
+        </Link>
+      </div>
+    );
+  }
+
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="flex justify-between items-center mb-6">
+    <div className="max-w-2xl mx-auto space-y-6">
+      <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Shopping Cart</h1>
-        {cartItems.length > 0 && (
-          <Button variant="destructive" size="sm" onClick={handleClearCart}>
-            Clear Cart
-          </Button>
-        )}
+        <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-destructive" onClick={handleClearCart}>
+          Clear all
+        </Button>
       </div>
 
-      {cartItems.length === 0 ? (
-        <div className="text-center py-12">
-          <p className="text-muted-foreground">Your cart is empty</p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {cartItems.map(({ product, quantity }) => (
-            <div key={product.id} className="flex items-center gap-4 p-4 border rounded-lg">
-              <div className="flex-1">
-                <h3 className="font-medium">{product.name}</h3>
-                <p className="text-sm text-muted-foreground">${product.price} each</p>
+      <div className="space-y-3">
+        {items.map((item) => {
+          const img = item.imageUrl || getProductImage(item.name, "OTHER");
+          const subtotal = (item.price * item.quantity).toFixed(2);
+          return (
+            <div key={item.id} className="flex items-center gap-4 p-4 rounded-xl border bg-card">
+              <img
+                src={img}
+                alt={item.name}
+                className="w-16 h-16 rounded-lg object-cover flex-shrink-0 bg-muted"
+              />
+              <div className="flex-1 min-w-0">
+                <p className="font-semibold text-sm leading-tight truncate">{item.name}</p>
+                <p className="text-xs text-muted-foreground mt-0.5">${item.price.toFixed(2)} each</p>
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-shrink-0">
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleUpdateQuantity(product, quantity - 1)}
-                  disabled={quantity <= 1}
+                  className="h-7 w-7"
+                  onClick={() => handleUpdateQuantity(item.id, item.storeId, item.quantity - 1)}
+                  disabled={item.quantity <= 1}
                 >
-                  <Minus className="h-4 w-4" />
+                  <Minus className="h-3 w-3" />
                 </Button>
-
-                <span className="w-8 text-center">{quantity}</span>
-
+                <span className="w-6 text-center text-sm font-medium tabular-nums">{item.quantity}</span>
                 <Button
                   variant="outline"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleUpdateQuantity(product, quantity + 1)}
-                  disabled={quantity >= product.stock}
+                  className="h-7 w-7"
+                  onClick={() => handleUpdateQuantity(item.id, item.storeId, item.quantity + 1)}
                 >
-                  <Plus className="h-4 w-4" />
+                  <Plus className="h-3 w-3" />
                 </Button>
+              </div>
 
+              <div className="flex items-center gap-3 flex-shrink-0">
+                <span className="text-sm font-semibold w-14 text-right tabular-nums">${subtotal}</span>
                 <Button
-                  variant="destructive"
+                  variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => handleRemoveItem(product)}
+                  className="h-7 w-7 text-muted-foreground hover:text-destructive"
+                  onClick={() => handleRemoveItem(item.id, item.storeId)}
                 >
-                  <Trash2 className="h-4 w-4" />
+                  <Trash2 className="h-3.5 w-3.5" />
                 </Button>
               </div>
             </div>
-          ))}
+          );
+        })}
+      </div>
 
-          <div className="pt-4 border-t">
-            <div className="flex justify-between items-center mb-4">
-              <span className="font-medium">Total</span>
-              <span className="text-lg font-bold">${total.toFixed(2)}</span>
-            </div>
-            <Button className="w-full" onClick={handleCheckout} disabled={isCheckingOut}>
-              {isCheckingOut ? "Placing order…" : "Proceed to Checkout"}
-            </Button>
-          </div>
+      <div className="rounded-xl border bg-card p-5 space-y-4">
+        <div className="flex justify-between text-sm text-muted-foreground">
+          <span>{items.reduce((n, i) => n + i.quantity, 0)} items</span>
+          <span>Subtotal</span>
         </div>
-      )}
+        <div className="flex justify-between items-center text-lg font-bold border-t pt-4">
+          <span>Total</span>
+          <span>${total.toFixed(2)}</span>
+        </div>
+        <Button className="w-full" size="lg" onClick={handleCheckout} disabled={isCheckingOut}>
+          {isCheckingOut ? "Placing order…" : "Proceed to Checkout"}
+        </Button>
+      </div>
     </div>
   );
 }
