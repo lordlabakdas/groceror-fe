@@ -42,6 +42,10 @@ interface AuthContextValue {
   dialogTab: "login" | "register";
   dialogEntityType: "user" | "store";
   setDialogOpen: (open: boolean) => void;
+  // Profile sheet state — consumed by ProfileSheet via this context.
+  profileOpen: boolean;
+  openProfile: () => void;
+  setProfileOpen: (open: boolean) => void;
 }
 
 const AuthContext = createContext<AuthContextValue>({
@@ -53,6 +57,9 @@ const AuthContext = createContext<AuthContextValue>({
   dialogTab: "login",
   dialogEntityType: "user",
   setDialogOpen: () => {},
+  profileOpen: false,
+  openProfile: () => {},
+  setProfileOpen: () => {},
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
@@ -60,6 +67,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [dialogTab, setDialogTab] = useState<"login" | "register">("login");
   const [dialogEntityType, setDialogEntityType] = useState<"user" | "store">("user");
+  const [profileOpen, setProfileOpen] = useState(false);
   const [, setLocation] = useLocation();
 
   const login = useCallback((token: string) => {
@@ -74,6 +82,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setLocation("/");
   }, [setLocation]);
 
+  const openProfile = useCallback(() => setProfileOpen(true), []);
+
   const openLogin = useCallback((tab: "login" | "register" = "login", entityType: "user" | "store" = "user") => {
     setDialogTab(tab);
     setDialogEntityType(entityType);
@@ -82,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, login, logout, openLogin, dialogOpen, dialogTab, dialogEntityType, setDialogOpen }}
+      value={{ user, login, logout, openLogin, dialogOpen, dialogTab, dialogEntityType, setDialogOpen, profileOpen, openProfile, setProfileOpen }}
     >
       {children}
     </AuthContext.Provider>

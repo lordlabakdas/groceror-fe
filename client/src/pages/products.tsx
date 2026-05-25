@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Categories } from "@/components/categories";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -12,9 +12,10 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Search, Check } from "lucide-react";
+import { Search, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { useAuth } from "@/lib/auth-context";
 
 import { CATALOG, CATEGORY_ENUM, type CatalogItem } from "@/lib/catalog";
 
@@ -183,10 +184,16 @@ function CatalogCard({ item, added, onAdd }: CatalogCardProps) {
 // ---------------------------------------------------------------------------
 
 export default function Products() {
+  const { openProfile } = useAuth();
   const [category, setCategory] = useState("All");
   const [search, setSearch] = useState("");
   const [dialogItem, setDialogItem] = useState<CatalogItem | null>(null);
   const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+
+  const { data: profile } = useQuery<{ name: string | null; location: string | null }>({
+    queryKey: ["/user/me"],
+  });
+  const profileIncomplete = profile && (!profile.name || !profile.location);
 
   const filtered = CATALOG.filter((item) => {
     const matchesCategory = category === "All" || item.category === category;
@@ -211,6 +218,24 @@ export default function Products() {
 
   return (
     <div className="space-y-6">
+      {profileIncomplete && (
+        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3">
+          <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
+          <div className="flex-1 text-sm text-amber-800 dark:text-amber-300">
+            {!profile.name && !profile.location
+              ? "Your store profile is incomplete — add a name and location so shoppers can find you."
+              : !profile.name
+              ? "Your store has no name — shoppers won't know who you are."
+              : "Your store has no location — it won't appear on the map."}
+          </div>
+          <button
+            className="text-xs font-semibold text-amber-700 dark:text-amber-400 hover:underline flex-shrink-0"
+            onClick={openProfile}
+          >
+            Complete profile
+          </button>
+        </div>
+      )}
       <div className="flex flex-col md:flex-row gap-4 md:items-center justify-between">
         <Categories selected={category} onSelect={setCategory} />
         <div className="relative w-full md:w-64">

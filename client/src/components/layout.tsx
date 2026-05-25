@@ -9,9 +9,8 @@ import { ProfileSheet } from "@/components/profile-sheet";
 
 export function Layout({ children }: { children: React.ReactNode }) {
   const { state } = useCart();
-  const { user, openLogin } = useAuth();
+  const { user, openLogin, profileOpen, setProfileOpen } = useAuth();
   const [drawerOpen, setDrawerOpen] = useState(false);
-  const [profileOpen, setProfileOpen] = useState(false);
   const [location] = useLocation();
 
   const totalItems = state.items.reduce((acc, item) => acc + item.quantity, 0);

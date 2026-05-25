@@ -59,17 +59,29 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
   }, [profile]);
 
   const saveMutation = useMutation({
-    mutationFn: () =>
-      apiRequest("POST", "/user/set-profile", {
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/user/set-profile", {
         name,
         email,
         location: location || undefined,
         ...(isStore ? { website } : {}),
-      }),
-    onSuccess: () => {
+      });
+      return res.json() as Promise<{ message: string; geocoded: boolean | null }>;
+    },
+    onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["/user/me"] });
-      toast({ title: "Profile updated" });
       setEditing(false);
+      if (isStore && data.geocoded === true) {
+        toast({ title: "Profile updated", description: "Location mapped — your store will appear on the map." });
+      } else if (isStore && data.geocoded === false) {
+        toast({
+          title: "Profile updated",
+          description: "Location could not be geocoded. Your store won't appear on the map until a valid location is set.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Profile updated" });
+      }
     },
     onError: (err: any) => {
       toast({ title: "Update failed", description: err.message, variant: "destructive" });
