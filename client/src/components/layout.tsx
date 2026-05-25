@@ -61,6 +61,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         Browse
                       </a>
                     </Link>
+                    <Link href="/orders">
+                      <a
+                        onClick={() => setDrawerOpen(false)}
+                        className="block px-3 py-2 rounded-md text-base font-medium hover:bg-accent"
+                      >
+                        Orders
+                      </a>
+                    </Link>
                     <Link href="/cart">
                       <a
                         onClick={() => setDrawerOpen(false)}
@@ -119,6 +127,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/stores">
                   <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
                     Browse
+                  </a>
+                </Link>
+                <Link href="/orders">
+                  <a className="px-3 py-1.5 rounded-md text-sm font-medium hover:bg-accent transition-colors">
+                    Orders
                   </a>
                 </Link>
               </nav>
