@@ -52,6 +52,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         Myventory
                       </a>
                     </Link>
+                    <Link href="/store-orders">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/store-orders", location, true)}>
+                        Orders
+                      </a>
+                    </Link>
                   </nav>
                 )}
                 {user?.entityType === "user" && (
@@ -114,6 +119,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link href="/inventory">
                   <a className={navCls("/inventory", location)}>Myventory</a>
+                </Link>
+                <Link href="/store-orders">
+                  <a className={navCls("/store-orders", location)}>Orders</a>
                 </Link>
               </nav>
             )}
