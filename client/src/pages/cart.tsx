@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useCart } from "@/lib/cart";
 import { type Product, type GetStoreInventoryResponse } from "@/types/models";
@@ -9,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 export default function Cart() {
   const { state, dispatch } = useCart();
   const { toast } = useToast();
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   // Re-use the same query key as the products page so the result is cached.
   const { data } = useQuery<GetStoreInventoryResponse>({
@@ -56,6 +58,27 @@ export default function Cart() {
   function handleRemoveItem(product: Product) {
     dispatch({ type: "REMOVE_ITEM", payload: product.id });
     apiRequest("DELETE", `/cart/${product.storeId}/items/${product.id}`).catch(() => {});
+  }
+
+  async function handleCheckout() {
+    setIsCheckingOut(true);
+    try {
+      // Repeat each item UUID by its quantity so the analytics pipeline counts correctly.
+      const items = cartItems.flatMap(({ product, quantity }) =>
+        Array(quantity).fill(product.id),
+      );
+      await apiRequest("POST", "/order/create-order", {
+        items,
+        total_price: total,
+        status: "pending",
+      });
+      dispatch({ type: "CLEAR_CART" });
+      toast({ title: "Order placed!", description: `$${total.toFixed(2)} order is confirmed.` });
+    } catch (err: any) {
+      toast({ title: "Checkout failed", description: err.message, variant: "destructive" });
+    } finally {
+      setIsCheckingOut(false);
+    }
   }
 
   return (
@@ -122,7 +145,9 @@ export default function Cart() {
               <span className="font-medium">Total</span>
               <span className="text-lg font-bold">${total.toFixed(2)}</span>
             </div>
-            <Button className="w-full">Proceed to Checkout</Button>
+            <Button className="w-full" onClick={handleCheckout} disabled={isCheckingOut}>
+              {isCheckingOut ? "Placing order…" : "Proceed to Checkout"}
+            </Button>
           </div>
         </div>
       )}
