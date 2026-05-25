@@ -180,7 +180,7 @@ function CartView({
             </span>
           </div>
           <Button
-            className="w-full bg-green-600 hover:bg-green-700 text-white"
+            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
             onClick={onCheckout}
           >
             Checkout →
@@ -262,7 +262,65 @@ function CartItemRow({ item, onUpdateQuantity, onRemoveItem }: CartItemRowProps)
 }
 
 // ---------------------------------------------------------------------------
-// PaymentView placeholder
+// PaymentView — card form helpers
+// ---------------------------------------------------------------------------
+
+interface CardForm {
+  cardNumber: string;
+  expiry: string;
+  cvv: string;
+  nameOnCard: string;
+}
+
+interface CardErrors {
+  cardNumber?: string;
+  expiry?: string;
+  cvv?: string;
+  nameOnCard?: string;
+}
+
+function validateCard(form: CardForm): CardErrors {
+  const errors: CardErrors = {};
+  const digits = form.cardNumber.replace(/\s/g, "");
+  if (!digits || !/^\d{13,19}$/.test(digits)) {
+    errors.cardNumber = "Enter a valid card number (13–19 digits)";
+  }
+  if (!form.expiry) {
+    errors.expiry = "Required";
+  } else {
+    const match = form.expiry.match(/^(\d{2})\/(\d{2})$/);
+    if (!match) {
+      errors.expiry = "Use MM/YY format";
+    } else {
+      const [, mm, yy] = match;
+      const month = parseInt(mm, 10);
+      const year = 2000 + parseInt(yy, 10);
+      const now = new Date();
+      const expDate = new Date(year, month - 1, 1);
+      const thisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+      if (month < 1 || month > 12) errors.expiry = "Invalid month";
+      else if (expDate < thisMonth) errors.expiry = "Card has expired";
+    }
+  }
+  if (!form.cvv || !/^\d{3,4}$/.test(form.cvv)) {
+    errors.cvv = "3 or 4 digits";
+  }
+  if (!form.nameOnCard.trim()) {
+    errors.nameOnCard = "Required";
+  }
+  return errors;
+}
+
+function cardBrandIcon(cardNumber: string): string {
+  const first = cardNumber.replace(/\s/g, "")[0];
+  if (first === "4") return "💳 Visa";
+  if (first === "5") return "💳 MC";
+  if (first === "3") return "💳 Amex";
+  return "💳";
+}
+
+// ---------------------------------------------------------------------------
+// PaymentView
 // ---------------------------------------------------------------------------
 
 interface PaymentViewProps {
@@ -275,37 +333,216 @@ interface PaymentViewProps {
   onSuccess: () => void;
 }
 
-function PaymentView({ onClose, onBack }: PaymentViewProps) {
+function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSuccess }: PaymentViewProps) {
+  const [form, setForm] = useState<CardForm>({ cardNumber: "", expiry: "", cvv: "", nameOnCard: "" });
+  const [touched, setTouched] = useState<Partial<Record<keyof CardForm, boolean>>>({});
+  const [submitting, setSubmitting] = useState(false);
+  const [apiError, setApiError] = useState<string | null>(null);
+
+  const errors = validateCard(form);
+  const hasErrors = Object.keys(errors).length > 0;
+
+  function set(field: keyof CardForm, value: string) {
+    setForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  function touch(field: keyof CardForm) {
+    setTouched((prev) => ({ ...prev, [field]: true }));
+  }
+
+  const inputCls = (field: keyof CardForm) =>
+    `w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+      touched[field] && errors[field] ? "border-destructive" : "border-input"
+    }`;
+
+  async function handlePlaceOrder() {
+    // Touch all fields to reveal any validation errors
+    setTouched({ cardNumber: true, expiry: true, cvv: true, nameOnCard: true });
+    if (hasErrors) return;
+
+    setSubmitting(true);
+    setApiError(null);
+    try {
+      // Task 5 will replace this with the real API call
+      onSuccess();
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  // Build collapsed cart summary
+  const summaryItems = items.slice(0, 2).map((i) => `${i.name} ×${i.quantity}`).join(", ");
+  const summaryMore = items.length > 2 ? "…" : "";
+
   return (
-    <>
+    <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-900 to-emerald-700 px-4 py-4 flex items-center justify-between shrink-0">
+      <div className="bg-gradient-to-br from-[#0a2614] to-emerald-700 px-4 py-4 flex items-start justify-between shrink-0">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="text-emerald-200 hover:text-white hover:bg-emerald-800/60 h-8 w-8"
+            className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8"
             onClick={onBack}
           >
             <ArrowLeft className="h-4 w-4" />
           </Button>
-          <h2 className="text-white text-lg font-semibold">Checkout</h2>
+          <div>
+            <h2 className="text-white text-lg font-semibold leading-tight">Checkout</h2>
+            {storeName && (
+              <p className="text-emerald-200 text-sm mt-0.5">{storeName} · Pickup</p>
+            )}
+          </div>
         </div>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="text-emerald-200 hover:text-white hover:bg-emerald-800/60 h-8 w-8"
+        <button
+          className="h-8 w-8 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
           onClick={onClose}
+          aria-label="Close"
         >
           <X className="h-4 w-4" />
-        </Button>
+        </button>
       </div>
 
-      {/* Placeholder body */}
-      <div className="flex-1 flex items-center justify-center text-muted-foreground text-sm">
-        Payment form — Task 4
+      {/* Scrollable body */}
+      <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
+        {/* Collapsed cart summary strip */}
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 flex items-center justify-between">
+          <div>
+            <p className="text-emerald-700 font-semibold text-sm">
+              {itemCount} {itemCount === 1 ? "item" : "items"} · ${total.toFixed(2)}
+            </p>
+            <p className="text-emerald-600 text-xs mt-0.5">
+              {summaryItems}{summaryMore}
+            </p>
+          </div>
+          <button
+            className="text-xs text-emerald-700 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-full px-3 py-1 transition-colors"
+            onClick={onBack}
+          >
+            ← Edit
+          </button>
+        </div>
+
+        {/* Express payment buttons */}
+        <div className="grid grid-cols-2 gap-2">
+          <button
+            disabled
+            title="Coming soon"
+            className="flex items-center justify-center gap-1.5 bg-black text-white text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60"
+          >
+            <span>⬛</span> Apple Pay
+          </button>
+          <button
+            disabled
+            title="Coming soon"
+            className="flex items-center justify-center gap-1.5 bg-white text-blue-600 text-sm font-medium rounded-lg py-2.5 border border-gray-300 cursor-not-allowed opacity-60"
+          >
+            G Pay
+          </button>
+        </div>
+
+        {/* Divider */}
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-px bg-border" />
+          <span className="text-xs text-muted-foreground">or pay by card</span>
+          <div className="flex-1 h-px bg-border" />
+        </div>
+
+        {/* Card form */}
+        <div className="space-y-3">
+          {/* Card number */}
+          <div>
+            <div className="relative">
+              <input
+                className={inputCls("cardNumber")}
+                placeholder="Card number"
+                value={form.cardNumber}
+                maxLength={23}
+                onChange={(e) => set("cardNumber", e.target.value)}
+                onBlur={() => touch("cardNumber")}
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">
+                {cardBrandIcon(form.cardNumber)}
+              </span>
+            </div>
+            {touched.cardNumber && errors.cardNumber && (
+              <p className="text-destructive text-xs mt-1">{errors.cardNumber}</p>
+            )}
+          </div>
+
+          {/* Expiry + CVV */}
+          <div className="grid grid-cols-2 gap-2">
+            <div>
+              <input
+                className={inputCls("expiry")}
+                placeholder="MM/YY"
+                value={form.expiry}
+                maxLength={5}
+                onChange={(e) => {
+                  let v = e.target.value.replace(/[^0-9]/g, "");
+                  if (v.length >= 3) v = v.slice(0, 2) + "/" + v.slice(2, 4);
+                  set("expiry", v);
+                }}
+                onBlur={() => touch("expiry")}
+              />
+              {touched.expiry && errors.expiry && (
+                <p className="text-destructive text-xs mt-1">{errors.expiry}</p>
+              )}
+            </div>
+            <div>
+              <input
+                className={inputCls("cvv")}
+                placeholder="CVV"
+                value={form.cvv}
+                maxLength={4}
+                onChange={(e) => set("cvv", e.target.value.replace(/\D/g, "").slice(0, 4))}
+                onBlur={() => touch("cvv")}
+              />
+              {touched.cvv && errors.cvv && (
+                <p className="text-destructive text-xs mt-1">{errors.cvv}</p>
+              )}
+            </div>
+          </div>
+
+          {/* Name on card */}
+          <div>
+            <input
+              className={inputCls("nameOnCard")}
+              placeholder="Name on card"
+              value={form.nameOnCard}
+              onChange={(e) => set("nameOnCard", e.target.value)}
+              onBlur={() => touch("nameOnCard")}
+            />
+            {touched.nameOnCard && errors.nameOnCard && (
+              <p className="text-destructive text-xs mt-1">{errors.nameOnCard}</p>
+            )}
+          </div>
+        </div>
+
+        {/* API error */}
+        {apiError && (
+          <p className="text-destructive text-sm text-center">{apiError}</p>
+        )}
       </div>
-    </>
+
+      {/* Sticky CTA */}
+      <div className="border-t px-4 py-4 flex-shrink-0">
+        <Button
+          className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+          disabled={submitting}
+          onClick={handlePlaceOrder}
+        >
+          {submitting ? (
+            <span className="flex items-center gap-2">
+              <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
+              Placing order…
+            </span>
+          ) : (
+            `Place Order — $${total.toFixed(2)}`
+          )}
+        </Button>
+      </div>
+    </div>
   );
 }
 
