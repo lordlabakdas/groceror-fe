@@ -34,6 +34,7 @@ import {
   Search,
   RefreshCw,
   ShoppingBag,
+  Calendar,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -105,17 +106,29 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(item?.quantity ?? 0);
+  const [threshold, setThreshold] = useState("");
 
   const mutation = useMutation({
-    mutationFn: () =>
-      apiRequest("PUT", `/inventory/${item!.id}`, { quantity }),
+    mutationFn: async () => {
+      await apiRequest("PUT", `/inventory/${item!.id}`, { quantity });
+      if (threshold !== "") {
+        await apiRequest("PUT", `/inventory/${item!.id}/threshold`, {
+          threshold: Number(threshold),
+        });
+      }
+    },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      queryClient.invalidateQueries({ queryKey: ["/dashboard/"] });
       toast({ title: "Updated", description: `${item!.name} quantity updated.` });
       onClose();
     },
     onError: (err: any) => {
-      toast({ title: "Update failed", description: err.message ?? "An unexpected error occurred.", variant: "destructive" });
+      toast({
+        title: "Update failed",
+        description: err.message ?? "An unexpected error occurred.",
+        variant: "destructive",
+      });
     },
   });
 
@@ -136,6 +149,17 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
               min={0}
               value={quantity}
               onChange={(e) => setQuantity(Number(e.target.value))}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="edit-threshold">Low stock alert below (optional)</Label>
+            <Input
+              id="edit-threshold"
+              type="number"
+              min={0}
+              placeholder="e.g. 5"
+              value={threshold}
+              onChange={(e) => setThreshold(e.target.value)}
             />
           </div>
           <div className="flex justify-end gap-2 pt-1">
@@ -200,6 +224,61 @@ function EditPriceDialog({ item, onClose }: EditDialogProps) {
   );
 }
 
+function EditExpiryDialog({ item, onClose }: EditDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [expiryDate, setExpiryDate] = useState("");
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PUT", `/inventory/${item!.id}/expiry`, { expiry_date: expiryDate }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/dashboard/"] });
+      toast({ title: "Expiry set", description: `${item!.name} expiry date saved.` });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Update failed",
+        description: err.message ?? "An unexpected error occurred.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  if (!item) return null;
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Set expiry — {item.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
+          <div className="space-y-1">
+            <Label htmlFor="edit-expiry">Expiry date</Label>
+            <Input
+              id="edit-expiry"
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+            />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button
+              onClick={() => mutation.mutate()}
+              disabled={mutation.isPending || expiryDate === ""}
+            >
+              {mutation.isPending ? "Saving…" : "Set Expiry"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // ---------------------------------------------------------------------------
 // Inventory card
 // ---------------------------------------------------------------------------
@@ -209,9 +288,10 @@ interface InventoryCardProps {
   onDelete: () => void;
   onEdit: () => void;
   onSetPrice: () => void;
+  onSetExpiry: () => void;
 }
 
-function InventoryCard({ item, onDelete, onEdit, onSetPrice }: InventoryCardProps) {
+function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
@@ -247,6 +327,13 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice }: InventoryCardProp
             aria-label="Set price"
           >
             <DollarSign className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onSetExpiry(); }}
+            className="bg-white/90 hover:bg-amber-50 text-gray-400 hover:text-amber-600 rounded-full p-1.5 shadow-sm"
+            aria-label="Set expiry date"
+          >
+            <Calendar className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -312,6 +399,7 @@ export default function Inventory() {
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<InventoryItem | null>(null);
   const [priceEditTarget, setPriceEditTarget] = useState<InventoryItem | null>(null);
+  const [expiryEditTarget, setExpiryEditTarget] = useState<InventoryItem | null>(null);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<GetStoreInventoryResponse>({
     queryKey: ["/inventory/get-store-inventory"],
@@ -459,6 +547,7 @@ export default function Inventory() {
               onDelete={() => setDeleteTarget(item.name)}
               onEdit={() => setEditTarget(item)}
               onSetPrice={() => setPriceEditTarget(item)}
+              onSetExpiry={() => setExpiryEditTarget(item)}
             />
           ))}
         </div>
@@ -476,6 +565,13 @@ export default function Inventory() {
         key={priceEditTarget?.id}
         item={priceEditTarget}
         onClose={() => setPriceEditTarget(null)}
+      />
+
+      {/* expiry edit dialog */}
+      <EditExpiryDialog
+        key={expiryEditTarget?.id}
+        item={expiryEditTarget}
+        onClose={() => setExpiryEditTarget(null)}
       />
 
       {/* delete confirm dialog */}
