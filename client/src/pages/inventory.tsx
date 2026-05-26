@@ -111,7 +111,7 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
   const mutation = useMutation({
     mutationFn: async () => {
       await apiRequest("PUT", `/inventory/${item!.id}`, { quantity });
-      if (threshold !== "") {
+      if (threshold !== "" && Number(threshold) >= 0) {
         await apiRequest("PUT", `/inventory/${item!.id}/threshold`, {
           threshold: Number(threshold),
         });
@@ -120,7 +120,7 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
       queryClient.invalidateQueries({ queryKey: ["/dashboard/"] });
-      toast({ title: "Updated", description: `${item!.name} quantity updated.` });
+      toast({ title: "Updated", description: `${item!.name} updated.` });
       onClose();
     },
     onError: (err: any) => {
@@ -260,6 +260,7 @@ function EditExpiryDialog({ item, onClose }: EditDialogProps) {
             <Input
               id="edit-expiry"
               type="date"
+              min={new Date().toISOString().split("T")[0]}
               value={expiryDate}
               onChange={(e) => setExpiryDate(e.target.value)}
             />
