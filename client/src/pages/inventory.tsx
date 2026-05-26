@@ -101,18 +101,17 @@ interface EditDialogProps {
   onClose: () => void;
 }
 
-function EditInventoryDialog({ item, onClose }: EditDialogProps) {
+function EditQuantityDialog({ item, onClose }: EditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(item?.quantity ?? 0);
-  const [price, setPrice] = useState(item?.price ?? 0);
 
   const mutation = useMutation({
     mutationFn: () =>
-      apiRequest("PUT", `/inventory/${item!.id}`, { quantity, price }),
+      apiRequest("PUT", `/inventory/${item!.id}`, { quantity }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
-      toast({ title: "Updated", description: `${item!.name} updated.` });
+      toast({ title: "Updated", description: `${item!.name} quantity updated.` });
       onClose();
     },
     onError: (err: any) => {
@@ -126,7 +125,7 @@ function EditInventoryDialog({ item, onClose }: EditDialogProps) {
     <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
       <DialogContent className="sm:max-w-sm">
         <DialogHeader>
-          <DialogTitle>Edit — {item.name}</DialogTitle>
+          <DialogTitle>Edit quantity — {item.name}</DialogTitle>
         </DialogHeader>
         <div className="space-y-4 pt-1">
           <div className="space-y-1">
@@ -139,6 +138,45 @@ function EditInventoryDialog({ item, onClose }: EditDialogProps) {
               onChange={(e) => setQuantity(Number(e.target.value))}
             />
           </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="outline" onClick={onClose}>Cancel</Button>
+            <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
+              {mutation.isPending ? "Saving…" : "Save"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function EditPriceDialog({ item, onClose }: EditDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [price, setPrice] = useState(item?.price ?? 0);
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PUT", `/inventory/${item!.id}`, { price }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      toast({ title: "Price updated", description: `${item!.name} is now $${price.toFixed(2)}.` });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  if (!item) return null;
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Set price — {item.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
           <div className="space-y-1">
             <Label htmlFor="edit-price">Price ($)</Label>
             <Input
@@ -153,7 +191,7 @@ function EditInventoryDialog({ item, onClose }: EditDialogProps) {
           <div className="flex justify-end gap-2 pt-1">
             <Button variant="outline" onClick={onClose}>Cancel</Button>
             <Button onClick={() => mutation.mutate()} disabled={mutation.isPending}>
-              {mutation.isPending ? "Saving…" : "Save Changes"}
+              {mutation.isPending ? "Saving…" : "Update Price"}
             </Button>
           </div>
         </div>
@@ -170,9 +208,10 @@ interface InventoryCardProps {
   item: InventoryItem;
   onDelete: () => void;
   onEdit: () => void;
+  onSetPrice: () => void;
 }
 
-function InventoryCard({ item, onDelete, onEdit }: InventoryCardProps) {
+function InventoryCard({ item, onDelete, onEdit, onSetPrice }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
@@ -198,9 +237,16 @@ function InventoryCard({ item, onDelete, onEdit }: InventoryCardProps) {
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
             className="bg-white/90 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-full p-1.5 shadow-sm"
-            aria-label="Edit item"
+            aria-label="Edit quantity"
           >
             <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button
+            onClick={(e) => { e.stopPropagation(); onSetPrice(); }}
+            className="bg-white/90 hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 rounded-full p-1.5 shadow-sm"
+            aria-label="Set price"
+          >
+            <DollarSign className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
@@ -265,6 +311,7 @@ export default function Inventory() {
   const [search, setSearch] = useState("");
   const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
   const [editTarget, setEditTarget] = useState<InventoryItem | null>(null);
+  const [priceEditTarget, setPriceEditTarget] = useState<InventoryItem | null>(null);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<GetStoreInventoryResponse>({
     queryKey: ["/inventory/get-store-inventory"],
@@ -411,15 +458,22 @@ export default function Inventory() {
               item={item}
               onDelete={() => setDeleteTarget(item.name)}
               onEdit={() => setEditTarget(item)}
+              onSetPrice={() => setPriceEditTarget(item)}
             />
           ))}
         </div>
       )}
 
-      {/* edit dialog */}
-      <EditInventoryDialog
+      {/* quantity edit dialog */}
+      <EditQuantityDialog
         item={editTarget}
         onClose={() => setEditTarget(null)}
+      />
+
+      {/* price edit dialog */}
+      <EditPriceDialog
+        item={priceEditTarget}
+        onClose={() => setPriceEditTarget(null)}
       />
 
       {/* delete confirm dialog */}
