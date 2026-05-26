@@ -10,6 +10,7 @@ import NotFound from "@/pages/not-found";
 import Home from "@/pages/home";
 import Products from "@/pages/products";
 import Inventory from "@/pages/inventory";
+import Dashboard from "@/pages/dashboard";
 import Stores from "@/pages/stores";
 import StoreBrowse from "@/pages/store-browse";
 import Orders from "@/pages/orders";
@@ -41,6 +42,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/products">{() => <StoreOwnerRoute component={Products} />}</Route>
       <Route path="/inventory">{() => <StoreOwnerRoute component={Inventory} />}</Route>
+      <Route path="/dashboard">{() => <StoreOwnerRoute component={Dashboard} />}</Route>
       <Route path="/store-orders">{() => <StoreOwnerRoute component={StoreOrders} />}</Route>
       <Route path="/stores">{() => <BuyerRoute component={Stores} />}</Route>
       <Route path="/stores/:id">{() => <BuyerRoute component={StoreBrowse} />}</Route>

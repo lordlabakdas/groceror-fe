@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, User } from "lucide-react";
+import { ShoppingCart, Menu, User, LayoutDashboard } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
@@ -43,6 +43,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
               <SheetContent side="left" className="w-64">
                 {user?.entityType === "store" && (
                   <nav className="flex flex-col gap-1 mt-8">
+                    <Link href="/dashboard">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/dashboard", location, true)}>
+                        Dashboard
+                      </a>
+                    </Link>
                     <Link href="/products">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/products", location, true)}>
                         Products
@@ -116,6 +121,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
             {/* desktop nav links — role-based */}
             {user?.entityType === "store" && (
               <nav className="hidden md:flex items-center gap-1 ml-2">
+                <Link href="/dashboard">
+                  <a className={navCls("/dashboard", location)}>Dashboard</a>
+                </Link>
                 <Link href="/products">
                   <a className={navCls("/products", location)}>Products</a>
                 </Link>
