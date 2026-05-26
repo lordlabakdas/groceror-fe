@@ -38,6 +38,8 @@ export default function StoreBrowse() {
   const { state: cartState, openCart } = useCart();
   const addToCart = useAddToCart();
 
+  const storeName = store?.name ?? "Store";
+
   const products: Product[] = (inventoryData?.inventory ?? []).map((item) => ({
     id: item.id,
     name: item.name,
@@ -71,8 +73,6 @@ export default function StoreBrowse() {
       });
     }, 2000);
   }
-
-  const storeName = store?.name ?? "Store";
 
   return (
     <div className="space-y-6">
