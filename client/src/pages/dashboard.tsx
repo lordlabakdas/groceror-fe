@@ -1,11 +1,11 @@
 import { useQuery } from "@tanstack/react-query";
+import { type ReactNode } from "react";
 import { format } from "date-fns";
 import {
   AlertTriangle,
   ShoppingBag,
   Calendar,
   TrendingUp,
-  DollarSign,
   Package,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
@@ -108,9 +108,9 @@ function Panel({
   children,
 }: {
   title: string;
-  icon: React.ReactNode;
+  icon: ReactNode;
   borderColor: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <div className={`rounded-2xl border bg-card shadow-sm overflow-hidden border-l-4 ${borderColor}`}>
@@ -266,7 +266,10 @@ export default function Dashboard() {
                 <span className="font-medium">{item.name}</span>
                 <div className="flex items-center gap-2">
                   <span className="text-xs text-muted-foreground">
-                    {format(new Date(item.expiry_date), "MMM d")}
+                    {(() => {
+                      const [y, m, d] = item.expiry_date.split("-").map(Number);
+                      return format(new Date(y, m - 1, d), "MMM d");
+                    })()}
                   </span>
                   <Badge
                     className={
