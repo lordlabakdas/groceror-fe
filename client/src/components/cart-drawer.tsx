@@ -1,10 +1,12 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
 import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart, type CartItem } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -24,8 +26,38 @@ interface CartDrawerProps {
 export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const [drawerState, setDrawerState] = useState<DrawerState>("cart");
   const { state, dispatch } = useCart();
-
+  const { toast } = useToast();
   const items = state.items;
+
+  useEffect(() => {
+    if (!open || items.length === 0) return;
+    const storeId = items[0].storeId;
+    apiRequest("GET", `/inventory/browse/${storeId}`)
+      .then((res) => res.json())
+      .then((data: { inventory: { id: string; price: number }[] }) => {
+        const priceMap: Record<string, number> = {};
+        for (const inv of data.inventory) {
+          priceMap[inv.id] = inv.price;
+        }
+        const changed = items.filter(
+          (i) => priceMap[i.id] !== undefined && priceMap[i.id] !== i.price
+        );
+        if (changed.length > 0) {
+          dispatch({
+            type: "UPDATE_PRICES",
+            payload: changed.map((i) => ({ id: i.id, price: priceMap[i.id] })),
+          });
+          toast({
+            title: "Prices updated",
+            description: "Some item prices have changed since you last shopped.",
+          });
+        }
+      })
+      .catch(() => {
+        // Non-critical — silently keep cached prices on network failure.
+      });
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const storeName = items[0]?.storeName ?? "";
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0);
   const total = items.reduce((acc, i) => acc + i.price * i.quantity, 0);

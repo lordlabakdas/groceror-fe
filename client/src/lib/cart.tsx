@@ -22,6 +22,7 @@ type CartAction =
   | { type: "ADD_ITEM"; payload: CartItem }
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
+  | { type: "UPDATE_PRICES"; payload: { id: string; price: number }[] }
   | { type: "CLEAR_CART" };
 
 const CartContext = createContext<{
@@ -55,6 +56,17 @@ function cartReducer(state: CartState, action: CartAction): CartState {
           i.id === action.payload.id ? { ...i, quantity: action.payload.quantity } : i,
         ),
       };
+    case "UPDATE_PRICES": {
+      const priceMap: Record<string, number> = {};
+      for (const p of action.payload) {
+        priceMap[p.id] = p.price;
+      }
+      return {
+        items: state.items.map((i) =>
+          priceMap[i.id] !== undefined ? { ...i, price: priceMap[i.id] } : i
+        ),
+      };
+    }
     case "CLEAR_CART":
       return { items: [] };
     default:
