@@ -73,8 +73,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = useCallback((token: string) => {
     setAuthToken(token);
-    setUser(decodeToken(token));
-  }, []);
+    const decoded = decodeToken(token);
+    setUser(decoded);
+    setLocation(decoded?.entityType === "store" ? "/inventory" : "/stores");
+  }, [setLocation]);
 
   const logout = useCallback(() => {
     clearAuthToken();
