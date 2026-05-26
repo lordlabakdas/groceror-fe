@@ -115,7 +115,7 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
       onClose();
     },
     onError: (err: any) => {
-      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+      toast({ title: "Update failed", description: err.message ?? "An unexpected error occurred.", variant: "destructive" });
     },
   });
 
@@ -164,7 +164,7 @@ function EditPriceDialog({ item, onClose }: EditDialogProps) {
       onClose();
     },
     onError: (err: any) => {
-      toast({ title: "Update failed", description: err.message, variant: "destructive" });
+      toast({ title: "Update failed", description: err.message ?? "An unexpected error occurred.", variant: "destructive" });
     },
   });
 
@@ -466,12 +466,14 @@ export default function Inventory() {
 
       {/* quantity edit dialog */}
       <EditQuantityDialog
+        key={editTarget?.id}
         item={editTarget}
         onClose={() => setEditTarget(null)}
       />
 
       {/* price edit dialog */}
       <EditPriceDialog
+        key={priceEditTarget?.id}
         item={priceEditTarget}
         onClose={() => setPriceEditTarget(null)}
       />
