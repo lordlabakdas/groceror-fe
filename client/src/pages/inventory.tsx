@@ -494,7 +494,7 @@ export default function Inventory() {
           sub={`${lowStockCount} low stock`}
         />
         <StatCard
-          gradient="bg-gradient-to-br from-emerald-500 to-teal-600"
+          gradient="bg-gradient-to-br from-teal-500 to-cyan-600"
           icon={<BarChart3 className="h-4 w-4 text-white" />}
           label="Total Units"
           value={totalUnits.toLocaleString()}
