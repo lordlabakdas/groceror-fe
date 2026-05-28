@@ -150,11 +150,11 @@ function CartView({
   return (
     <>
       {/* Header */}
-      <div className="bg-gradient-to-br from-emerald-900 to-emerald-700 px-4 py-4 flex items-start justify-between shrink-0">
+      <div className="bg-card border-b border-border px-4 py-4 flex items-start justify-between shrink-0">
         <div>
           <h2 className="text-white text-lg font-semibold leading-tight">Your Cart</h2>
           {storeName && (
-            <p className="text-emerald-200 text-sm mt-0.5">{storeName}</p>
+            <p className="text-muted-foreground text-sm mt-0.5">{storeName}</p>
           )}
         </div>
         <div className="flex items-center gap-1">
@@ -162,7 +162,7 @@ function CartView({
             <Button
               variant="ghost"
               size="sm"
-              className="text-emerald-200 hover:text-white hover:bg-emerald-800/60 h-8 px-2 text-xs"
+              className="text-muted-foreground hover:bg-muted h-8 px-2 text-xs"
               onClick={onClearCart}
             >
               Clear all
@@ -171,7 +171,7 @@ function CartView({
           <Button
             variant="ghost"
             size="icon"
-            className="text-emerald-200 hover:text-white hover:bg-emerald-800/60 h-8 w-8"
+            className="text-muted-foreground hover:bg-muted h-8 w-8"
             onClick={onClose}
           >
             <X className="h-4 w-4" />
@@ -210,12 +210,12 @@ function CartView({
             <span className="text-muted-foreground">
               {itemCount} {itemCount === 1 ? "item" : "items"}
             </span>
-            <span className="font-semibold text-emerald-600 text-base">
+            <span className="font-semibold text-primary text-base">
               ${total.toFixed(2)}
             </span>
           </div>
           <Button
-            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+            className="w-full"
             onClick={onCheckout}
           >
             Checkout →
@@ -280,7 +280,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemoveItem }: CartItemRowProps)
 
           {/* Subtotal + remove */}
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-emerald-600">${subtotal}</span>
+            <span className="text-sm font-semibold text-primary">${subtotal}</span>
             <Button
               variant="ghost"
               size="icon"
@@ -386,7 +386,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   }
 
   const inputCls = (field: keyof CardForm) =>
-    `w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 ${
+    `w-full border rounded-lg px-3 py-2.5 text-sm outline-none transition-colors focus:ring-2 focus:ring-primary/60 focus:border-primary bg-input text-foreground ${
       touched[field] && errors[field] ? "border-destructive" : "border-input"
     }`;
 
@@ -421,12 +421,12 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   return (
     <div className="flex flex-col h-full">
       {/* Header */}
-      <div className="bg-gradient-to-br from-[#0a2614] to-emerald-700 px-4 py-4 flex items-start justify-between shrink-0">
+      <div className="bg-card border-b border-border px-4 py-4 flex items-start justify-between shrink-0">
         <div className="flex items-center gap-2">
           <Button
             variant="ghost"
             size="icon"
-            className="text-white/80 hover:text-white hover:bg-white/10 h-8 w-8"
+            className="text-muted-foreground hover:bg-muted h-8 w-8"
             onClick={onBack}
           >
             <ArrowLeft className="h-4 w-4" />
@@ -434,12 +434,12 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           <div>
             <h2 className="text-white text-lg font-semibold leading-tight">Checkout</h2>
             {storeName && (
-              <p className="text-emerald-200 text-sm mt-0.5">{storeName} · Pickup</p>
+              <p className="text-muted-foreground text-sm mt-0.5">{storeName} · Pickup</p>
             )}
           </div>
         </div>
         <button
-          className="h-8 w-8 rounded-full flex items-center justify-center text-white/80 hover:text-white hover:bg-white/10 transition-colors"
+          className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors"
           onClick={onClose}
           aria-label="Close"
         >
@@ -450,17 +450,17 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       {/* Scrollable body */}
       <div className="flex-1 overflow-y-auto px-4 py-4 space-y-4">
         {/* Collapsed cart summary strip */}
-        <div className="bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2.5 flex items-center justify-between">
+        <div className="bg-muted border border-border rounded-lg px-3 py-2.5 flex items-center justify-between">
           <div>
-            <p className="text-emerald-700 font-semibold text-sm">
+            <p className="text-foreground font-semibold text-sm">
               {itemCount} {itemCount === 1 ? "item" : "items"} · ${total.toFixed(2)}
             </p>
-            <p className="text-emerald-600 text-xs mt-0.5">
+            <p className="text-foreground text-xs mt-0.5">
               {summaryItems}{summaryMore}
             </p>
           </div>
           <button
-            className="text-xs text-emerald-700 bg-emerald-100 hover:bg-emerald-200 border border-emerald-300 rounded-full px-3 py-1 transition-colors"
+            className="text-xs text-muted-foreground bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1 transition-colors"
             onClick={onBack}
           >
             ← Edit
@@ -574,7 +574,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       {/* Sticky CTA */}
       <div className="border-t px-4 py-4 flex-shrink-0">
         <Button
-          className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+          className="w-full"
           disabled={submitting}
           onClick={handlePlaceOrder}
         >
@@ -607,14 +607,14 @@ function ConfirmationView({ storeName, onClose }: ConfirmationViewProps) {
   return (
     <>
       {/* Header — centred, no close button */}
-      <div className="bg-gradient-to-br from-[#0a2614] to-emerald-700 text-white px-4 py-4 text-center flex-shrink-0">
+      <div className="bg-card border-b border-border px-4 py-4 text-center flex-shrink-0">
         <h2 className="font-bold text-base">Order Confirmed</h2>
       </div>
 
       <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center text-center gap-4">
         {/* Animated checkmark */}
-        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-emerald-100 to-emerald-300 flex items-center justify-center shadow-lg animate-bounce">
-          <span className="text-3xl text-emerald-700">✓</span>
+        <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center shadow-lg animate-bounce">
+          <span className="text-3xl text-primary">✓</span>
         </div>
 
         <div>
@@ -624,17 +624,17 @@ function ConfirmationView({ storeName, onClose }: ConfirmationViewProps) {
           )}
         </div>
 
-        <div className="w-full bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-left">
-          <p className="text-xs font-bold text-emerald-800 mb-1.5">What happens next</p>
+        <div className="w-full bg-muted border border-border rounded-xl p-4 text-left">
+          <p className="text-xs font-bold text-foreground mb-1.5">What happens next</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
             {storeName || "The store"} will confirm your order. Head to{" "}
-            <span className="text-emerald-700 font-semibold">Orders</span> to track its status.
+            <span className="text-primary font-semibold">Orders</span> to track its status.
           </p>
         </div>
 
         <div className="w-full space-y-3 mt-2">
           <Button
-            className="w-full bg-emerald-700 hover:bg-emerald-800 text-white"
+            className="w-full"
             onClick={() => {
               setLocation("/orders");
               onClose();
@@ -643,7 +643,7 @@ function ConfirmationView({ storeName, onClose }: ConfirmationViewProps) {
             View my orders
           </Button>
           <button
-            className="text-sm text-emerald-700 font-semibold hover:underline"
+            className="text-sm text-primary font-semibold hover:underline"
             onClick={onClose}
           >
             Continue shopping
