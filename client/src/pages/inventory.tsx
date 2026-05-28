@@ -51,19 +51,19 @@ const CATEGORY_LABEL: Record<string, string> = {
 };
 
 const CATEGORY_COLOR: Record<string, string> = {
-  GROCERY: "bg-amber-100 text-amber-800",
-  PRODUCE: "bg-green-100 text-green-800",
-  MEAT: "bg-red-100 text-red-800",
-  DAIRY: "bg-sky-100 text-sky-800",
-  BAKERY: "bg-orange-100 text-orange-800",
-  OTHER: "bg-purple-100 text-purple-800",
+  GROCERY: "bg-amber-900/40 text-amber-300",
+  PRODUCE: "bg-primary/15 text-primary",
+  MEAT: "bg-red-900/40 text-red-300",
+  DAIRY: "bg-sky-900/40 text-sky-300",
+  BAKERY: "bg-orange-900/40 text-orange-300",
+  OTHER: "bg-purple-900/40 text-purple-300",
 };
 
 function stockStatus(qty: number): { label: string; color: string } {
-  if (qty === 0) return { label: "Out of Stock", color: "bg-red-100 text-red-700" };
-  if (qty < 5) return { label: "Critical", color: "bg-red-100 text-red-700" };
-  if (qty < 20) return { label: "Low Stock", color: "bg-amber-100 text-amber-700" };
-  return { label: "In Stock", color: "bg-emerald-100 text-emerald-700" };
+  if (qty === 0) return { label: "Out of Stock", color: "bg-red-900/30 text-red-400" };
+  if (qty < 5) return { label: "Critical", color: "bg-red-900/30 text-red-400" };
+  if (qty < 20) return { label: "Low Stock", color: "bg-amber-900/30 text-amber-400" };
+  return { label: "In Stock", color: "bg-primary/15 text-primary" };
 }
 
 // ---------------------------------------------------------------------------
@@ -83,7 +83,7 @@ function StatCard({ icon, label, value, sub, gradient }: StatCardProps) {
     <div className={`rounded-2xl p-5 text-white ${gradient} shadow-sm`}>
       <div className="flex items-center justify-between mb-3">
         <span className="text-white/80 text-sm font-medium">{label}</span>
-        <div className="bg-white/20 rounded-lg p-1.5">{icon}</div>
+        <div className="bg-secondary rounded-lg p-1.5">{icon}</div>
       </div>
       <p className="text-3xl font-bold tracking-tight">{value}</p>
       {sub && <p className="text-white/70 text-xs mt-1">{sub}</p>}
@@ -296,7 +296,7 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
-  const categoryColor = CATEGORY_COLOR[item.category] ?? "bg-gray-100 text-gray-700";
+  const categoryColor = CATEGORY_COLOR[item.category] ?? "bg-secondary text-muted-foreground";
 
   return (
     <div className="group relative rounded-2xl border bg-card overflow-hidden shadow-sm hover:shadow-lg transition-all duration-300 hover:-translate-y-0.5">
@@ -317,28 +317,28 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
         <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all duration-200">
           <button
             onClick={(e) => { e.stopPropagation(); onEdit(); }}
-            className="bg-white/90 hover:bg-blue-50 text-gray-400 hover:text-blue-600 rounded-full p-1.5 shadow-sm"
+            className="bg-card/90 hover:bg-blue-900/30 text-muted-foreground hover:text-blue-400 rounded-full p-1.5 shadow-sm"
             aria-label="Edit quantity"
           >
             <Pencil className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onSetPrice(); }}
-            className="bg-white/90 hover:bg-emerald-50 text-gray-400 hover:text-emerald-600 rounded-full p-1.5 shadow-sm"
+            className="bg-card/90 hover:bg-primary/30 text-muted-foreground hover:text-primary rounded-full p-1.5 shadow-sm"
             aria-label="Set price"
           >
             <DollarSign className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onSetExpiry(); }}
-            className="bg-white/90 hover:bg-amber-50 text-gray-400 hover:text-amber-600 rounded-full p-1.5 shadow-sm"
+            className="bg-card/90 hover:bg-amber-900/30 text-muted-foreground hover:text-amber-400 rounded-full p-1.5 shadow-sm"
             aria-label="Set expiry date"
           >
             <Calendar className="h-3.5 w-3.5" />
           </button>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
-            className="bg-white/90 hover:bg-red-50 text-gray-400 hover:text-red-600 rounded-full p-1.5 shadow-sm"
+            className="bg-card/90 hover:bg-red-900/30 text-muted-foreground hover:text-red-400 rounded-full p-1.5 shadow-sm"
             aria-label="Delete item"
           >
             <Trash2 className="h-3.5 w-3.5" />
@@ -374,12 +374,12 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
           <div
             className={`h-full rounded-full transition-all ${
               item.quantity === 0
-                ? "bg-red-400"
+                ? "bg-red-500"
                 : item.quantity < 5
-                ? "bg-red-400"
+                ? "bg-red-500"
                 : item.quantity < 20
-                ? "bg-amber-400"
-                : "bg-emerald-400"
+                ? "bg-amber-500"
+                : "bg-primary"
             }`}
             style={{ width: `${Math.min(100, (item.quantity / 100) * 100)}%` }}
           />
