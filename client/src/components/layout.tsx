@@ -11,11 +11,11 @@ import { CartDrawer } from "@/components/cart-drawer";
 function navCls(href: string, current: string, mobile = false) {
   const active = current === href || current.startsWith(href + "/");
   const base = mobile
-    ? "block px-3 py-2 rounded-md text-base font-medium transition-colors"
-    : "px-3 py-1.5 rounded-md text-sm font-medium transition-colors";
+    ? "block px-3 py-2 rounded-md text-base transition-colors"
+    : "px-3 py-1.5 rounded-md text-sm transition-colors";
   return active
     ? `${base} bg-accent text-accent-foreground font-semibold`
-    : `${base} text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground`;
+    : `${base} text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground font-medium`;
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
