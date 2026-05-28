@@ -43,11 +43,11 @@ const STATUS_LABELS: Record<string, string> = {
 };
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800 border-amber-200",
-  confirmed: "bg-blue-100 text-blue-800 border-blue-200",
-  ready: "bg-purple-100 text-purple-800 border-purple-200",
-  delivered: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
+  pending: "bg-amber-900/30 text-amber-300 border-amber-700/40",
+  confirmed: "bg-blue-900/30 text-blue-300 border-blue-700/40",
+  ready: "bg-purple-900/30 text-purple-300 border-purple-700/40",
+  delivered: "bg-emerald-900/30 text-emerald-300 border-emerald-700/40",
+  cancelled: "bg-muted text-muted-foreground border-border",
 };
 
 const NEXT_STATUSES: Record<string, string[]> = {
@@ -96,7 +96,7 @@ interface OrderCardProps {
 
 function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
   const items = groupItems(order.item_names);
-  const badgeCls = STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-600";
+  const badgeCls = STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground";
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
 
   return (
@@ -222,8 +222,8 @@ export default function StoreOrders() {
               onClick={() => setFilter(tab)}
               className={`px-3 py-1.5 rounded-full text-sm font-medium transition-colors border ${
                 filter === tab
-                  ? "bg-emerald-600 text-white border-emerald-600"
-                  : "bg-background text-muted-foreground border-border hover:border-emerald-400 hover:text-emerald-700"
+                  ? "bg-primary text-primary-foreground border-primary"
+                  : "bg-background text-muted-foreground border-border hover:border-primary/50 hover:text-primary"
               }`}
             >
               {tab === "all" ? "All" : STATUS_LABELS[tab]}
