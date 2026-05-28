@@ -472,14 +472,14 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           <button
             disabled
             title="Coming soon"
-            className="flex items-center justify-center gap-1.5 bg-black text-white text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60"
+            className="flex items-center justify-center gap-1.5 bg-muted text-muted-foreground border border-border text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60"
           >
             <span>⬛</span> Apple Pay
           </button>
           <button
             disabled
             title="Coming soon"
-            className="flex items-center justify-center gap-1.5 bg-white text-blue-600 text-sm font-medium rounded-lg py-2.5 border border-gray-300 cursor-not-allowed opacity-60"
+            className="flex items-center justify-center gap-1.5 bg-muted text-muted-foreground border border-border text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60"
           >
             G Pay
           </button>
