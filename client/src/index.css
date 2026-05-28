@@ -2,11 +2,47 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Dark-green palette — overrides @replit/vite-plugin-shadcn-theme-json */
+:root {
+  --background: 120 28% 14%;
+  --foreground: 141 67% 93%;
+  --card: 120 24% 23%;
+  --card-foreground: 141 67% 93%;
+  --popover: 120 24% 23%;
+  --popover-foreground: 141 67% 93%;
+  --primary: 142 69% 58%;
+  --primary-foreground: 120 35% 9%;
+  --secondary: 120 27% 33%;
+  --secondary-foreground: 141 76% 73%;
+  --muted: 120 26% 19%;
+  --muted-foreground: 120 18% 52%;
+  --accent: 120 27% 33%;
+  --accent-foreground: 141 76% 73%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 120 27% 33%;
+  --input: 120 26% 19%;
+  --ring: 142 69% 58%;
+  --radius: 0.5rem;
+  --chart-1: 142 69% 58%;
+  --chart-2: 141 76% 73%;
+  --chart-3: 120 27% 33%;
+  --chart-4: 38 92% 50%;
+  --chart-5: 0 84% 60%;
+  --sidebar-background: 120 28% 14%;
+  --sidebar-foreground: 141 67% 93%;
+  --sidebar-primary: 142 69% 58%;
+  --sidebar-primary-foreground: 120 35% 9%;
+  --sidebar-accent: 120 27% 33%;
+  --sidebar-accent-foreground: 141 76% 73%;
+  --sidebar-border: 120 27% 33%;
+  --sidebar-ring: 142 69% 58%;
+}
+
 @layer base {
   * {
     @apply border-border;
   }
-
   body {
     @apply font-sans antialiased bg-background text-foreground;
   }
