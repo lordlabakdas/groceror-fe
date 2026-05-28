@@ -184,7 +184,7 @@ function ProductCard({ product, inCart, justAdded, onAdd }: ProductCardProps) {
         />
         <Badge
           variant="secondary"
-          className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-white/80"
+          className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-card/80"
         >
           {product.category}
         </Badge>
