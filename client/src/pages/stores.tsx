@@ -147,16 +147,16 @@ function MapView({ stores, mappable, centre, zoom }: MapViewProps) {
               <div className="space-y-1 min-w-[160px]">
                 <p className="font-semibold text-sm">{store.name}</p>
                 {store.location && (
-                  <p className="text-xs text-gray-500 flex items-center gap-1">
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
                     <MapPin className="h-3 w-3 inline" />
                     {store.location}
                   </p>
                 )}
                 {store.website && (
-                  <p className="text-xs text-gray-500 truncate">{store.website}</p>
+                  <p className="text-xs text-muted-foreground truncate">{store.website}</p>
                 )}
                 <Link href={`/stores/${store.id}`}>
-                  <a className="block mt-2 text-xs font-medium text-emerald-700 hover:underline">
+                  <a className="block mt-2 text-xs font-medium text-primary hover:underline">
                     Browse store →
                   </a>
                 </Link>
@@ -202,8 +202,8 @@ function StoreCard({ store }: { store: StoreItem }) {
     <Link href={`/stores/${store.id}`}>
       <a className="block rounded-xl border bg-card shadow-sm hover:shadow-md hover:border-primary/40 transition-all cursor-pointer group p-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 rounded-lg bg-emerald-50 border border-emerald-200 flex items-center justify-center flex-shrink-0 group-hover:bg-emerald-100 transition-colors">
-            <Store className="h-5 w-5 text-emerald-600" />
+          <div className="w-10 h-10 rounded-lg bg-secondary/50 border border-border flex items-center justify-center flex-shrink-0 group-hover:bg-secondary/70 transition-colors">
+            <Store className="h-5 w-5 text-secondary-foreground" />
           </div>
           <div className="flex-1 min-w-0">
             <p className="font-semibold text-sm leading-tight truncate group-hover:text-primary transition-colors">
@@ -226,7 +226,7 @@ function StoreCard({ store }: { store: StoreItem }) {
         <div className="mt-3 flex items-center justify-between">
           <Badge
             variant="secondary"
-            className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200"
+            className="text-xs bg-primary/15 text-primary border border-primary/25"
           >
             {store.is_active ? "Open" : "Closed"}
           </Badge>
