@@ -63,11 +63,11 @@ interface DashboardData {
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-100 text-amber-800 border-amber-200",
-  confirmed: "bg-blue-100 text-blue-800 border-blue-200",
-  ready: "bg-purple-100 text-purple-800 border-purple-200",
-  delivered: "bg-emerald-100 text-emerald-800 border-emerald-200",
-  cancelled: "bg-gray-100 text-gray-600 border-gray-200",
+  pending: "bg-amber-900/30 text-amber-300 border border-amber-700/40",
+  confirmed: "bg-blue-900/30 text-blue-300 border border-blue-700/40",
+  ready: "bg-purple-900/30 text-purple-300 border border-purple-700/40",
+  delivered: "bg-green-900/30 text-green-300 border border-green-700/40",
+  cancelled: "bg-muted text-muted-foreground border border-border",
 };
 
 // ---------------------------------------------------------------------------
@@ -84,9 +84,9 @@ function KpiCard({
   color: "red" | "green" | "amber";
 }) {
   const colorCls = {
-    red: "border-red-200 bg-red-50 text-red-700",
-    green: "border-emerald-200 bg-emerald-50 text-emerald-700",
-    amber: "border-amber-200 bg-amber-50 text-amber-700",
+    red: "bg-red-900/20 border-red-800/40 text-red-400",
+    green: "bg-primary/15 border-primary/25 text-primary",
+    amber: "bg-amber-900/20 border-amber-800/40 text-amber-400",
   }[color];
 
   return (
@@ -201,7 +201,7 @@ export default function Dashboard() {
         {/* Low Stock */}
         <Panel
           title="Low Stock"
-          icon={<AlertTriangle className="h-4 w-4 text-red-500" />}
+          icon={<AlertTriangle className="h-4 w-4 text-red-400" />}
           borderColor="border-l-red-400"
         >
           {data.low_stock.length === 0 ? (
@@ -210,11 +210,11 @@ export default function Dashboard() {
             data.low_stock.map((item) => (
               <div key={item.id} className="flex items-center justify-between text-sm py-1">
                 <Link href="/inventory">
-                  <a className="font-medium hover:text-emerald-700 hover:underline underline-offset-2">
+                  <a className="font-medium hover:text-primary hover:underline underline-offset-2">
                     {item.name}
                   </a>
                 </Link>
-                <span className="text-red-600 font-semibold tabular-nums">
+                <span className="text-red-400 font-semibold tabular-nums">
                   {item.quantity} / {item.threshold}
                 </span>
               </div>
@@ -225,7 +225,7 @@ export default function Dashboard() {
         {/* Today's Orders */}
         <Panel
           title="Today's Orders"
-          icon={<ShoppingBag className="h-4 w-4 text-emerald-600" />}
+          icon={<ShoppingBag className="h-4 w-4 text-primary" />}
           borderColor="border-l-emerald-400"
         >
           {data.todays_summary.orders.length === 0 ? (
@@ -235,7 +235,7 @@ export default function Dashboard() {
               <div key={order.id} className="flex items-center justify-between text-sm py-1">
                 <div className="flex items-center gap-2">
                   <Badge
-                    className={`text-xs border ${STATUS_COLORS[order.status] ?? "bg-gray-100 text-gray-600"}`}
+                    className={`text-xs border ${STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground border-border"}`}
                     variant="outline"
                   >
                     {order.status}
@@ -244,7 +244,7 @@ export default function Dashboard() {
                     {new Date(order.order_date).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
                   </span>
                 </div>
-                <span className="font-semibold text-emerald-700">
+                <span className="font-semibold text-primary">
                   ${order.total_price.toFixed(2)}
                 </span>
               </div>
@@ -255,7 +255,7 @@ export default function Dashboard() {
         {/* Expiring Soon */}
         <Panel
           title="Expiring Soon"
-          icon={<Calendar className="h-4 w-4 text-amber-500" />}
+          icon={<Calendar className="h-4 w-4 text-amber-400" />}
           borderColor="border-l-amber-400"
         >
           {data.expiring_soon.length === 0 ? (
@@ -274,8 +274,8 @@ export default function Dashboard() {
                   <Badge
                     className={
                       item.days_remaining <= 2
-                        ? "bg-red-100 text-red-700 border-red-200 text-xs"
-                        : "bg-amber-100 text-amber-700 border-amber-200 text-xs"
+                        ? "bg-red-900/30 text-red-300 border-red-700/40 text-xs"
+                        : "bg-amber-900/30 text-amber-300 border-amber-700/40 text-xs"
                     }
                     variant="outline"
                   >
@@ -290,7 +290,7 @@ export default function Dashboard() {
         {/* Top Sellers */}
         <Panel
           title="Top Sellers — Last 7 Days"
-          icon={<TrendingUp className="h-4 w-4 text-purple-500" />}
+          icon={<TrendingUp className="h-4 w-4 text-purple-400" />}
           borderColor="border-l-purple-400"
         >
           {data.top_sellers.length === 0 ? (
@@ -303,7 +303,7 @@ export default function Dashboard() {
                   <span className="font-medium">{item.name}</span>
                   <span className="text-muted-foreground text-xs">×{item.units_sold}</span>
                 </div>
-                <span className="font-semibold text-purple-700">
+                <span className="font-semibold text-purple-400">
                   ${item.revenue.toFixed(2)}
                 </span>
               </div>
