@@ -123,7 +123,7 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
     <Sheet open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <SheetContent
         side="right"
-        className="w-full sm:w-96 p-0 flex flex-col overflow-y-auto"
+        className="w-full sm:w-96 p-0 flex flex-col overflow-y-auto bg-card"
       >
         {/* ── header ── */}
         <div
@@ -139,7 +139,7 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
             ) : null}
             <p className="text-sm text-white/70">{user?.phone}</p>
           </div>
-          <Badge className="bg-emerald-500/30 text-emerald-100 border border-emerald-400/30 hover:bg-emerald-500/30">
+          <Badge className="bg-primary/30 text-primary-foreground/80 border border-primary/40 hover:bg-primary/30">
             {roleLabel}
           </Badge>
         </div>
