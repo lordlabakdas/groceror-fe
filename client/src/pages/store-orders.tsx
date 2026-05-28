@@ -46,7 +46,7 @@ const STATUS_COLORS: Record<string, string> = {
   pending: "bg-amber-900/30 text-amber-300 border-amber-700/40",
   confirmed: "bg-blue-900/30 text-blue-300 border-blue-700/40",
   ready: "bg-purple-900/30 text-purple-300 border-purple-700/40",
-  delivered: "bg-emerald-900/30 text-emerald-300 border-emerald-700/40",
+  delivered: "bg-primary/15 text-primary border-primary/25",
   cancelled: "bg-muted text-muted-foreground border-border",
 };
 
