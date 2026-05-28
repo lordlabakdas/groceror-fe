@@ -226,7 +226,7 @@ export default function Dashboard() {
         <Panel
           title="Today's Orders"
           icon={<ShoppingBag className="h-4 w-4 text-primary" />}
-          borderColor="border-l-emerald-400"
+          borderColor="border-l-primary"
         >
           {data.todays_summary.orders.length === 0 ? (
             <EmptyState message="No orders yet today." />
