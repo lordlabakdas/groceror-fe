@@ -14,8 +14,8 @@ function navCls(href: string, current: string, mobile = false) {
     ? "block px-3 py-2 rounded-md text-base font-medium transition-colors"
     : "px-3 py-1.5 rounded-md text-sm font-medium transition-colors";
   return active
-    ? `${base} bg-emerald-50 text-emerald-800 font-semibold dark:bg-emerald-950/40 dark:text-emerald-300`
-    : `${base} text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800 dark:text-emerald-400 dark:hover:bg-emerald-950/30`;
+    ? `${base} bg-accent text-accent-foreground font-semibold`
+    : `${base} text-muted-foreground hover:bg-accent/50 hover:text-accent-foreground`;
 }
 
 export function Layout({ children }: { children: React.ReactNode }) {
@@ -28,7 +28,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
-      <header className="border-b sticky top-0 z-40 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
           {/* ---- left: hamburger + logo + nav ---- */}
@@ -115,7 +115,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
             {/* logo */}
             <Link href="/">
-              <a href={user ? (user.entityType === "store" ? "/products" : "/stores") : "/"} className="text-xl font-bold tracking-tight">groceror</a>
+              <a href={user ? (user.entityType === "store" ? "/products" : "/stores") : "/"} className="text-xl font-bold tracking-tight text-primary">groceror</a>
             </Link>
 
             {/* desktop nav links — role-based */}
