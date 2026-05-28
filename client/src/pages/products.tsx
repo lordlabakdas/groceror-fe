@@ -146,7 +146,7 @@ function CatalogCard({ item, added, onAdd }: CatalogCardProps) {
         />
         <Badge
           variant="secondary"
-          className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-white/80"
+          className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-card/80"
         >
           {item.category}
         </Badge>
@@ -219,7 +219,7 @@ export default function Products() {
   return (
     <div className="space-y-6">
       {profileIncomplete && (
-        <div className="flex items-start gap-3 rounded-xl border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-700 px-4 py-3">
+        <div className="flex items-start gap-3 rounded-xl border border-amber-700/40 bg-amber-900/20 px-4 py-3">
           <AlertCircle className="h-4 w-4 text-amber-600 dark:text-amber-400 flex-shrink-0 mt-0.5" />
           <div className="flex-1 text-sm text-amber-800 dark:text-amber-300">
             {!profile.name && !profile.location
