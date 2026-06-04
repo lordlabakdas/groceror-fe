@@ -1,13 +1,20 @@
 import { useQuery } from "@tanstack/react-query";
-import { Package, ChevronDown, ChevronUp } from "lucide-react";
+import { ShoppingBag } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+
+interface OrderLineItem {
+  inventory_id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
 
 interface OrderItem {
   id: string;
   total_price: number;
   status: string;
-  items: string[];
+  items: OrderLineItem[];
   order_date: string;
 }
 
@@ -22,60 +29,49 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
 }
 
 function OrderRow({ order }: { order: OrderItem }) {
-  const [expanded, setExpanded] = useState(false);
-  const uniqueItems = Array.from(new Set(order.items));
+  const [open, setOpen] = useState(false);
+  const totalQty = order.items.reduce((acc, i) => acc + i.quantity, 0);
   const date = new Date(order.order_date).toLocaleDateString(undefined, {
-    year: "numeric",
     month: "short",
     day: "numeric",
+    year: "numeric",
   });
 
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
       <button
         className="w-full text-left p-5 flex items-center gap-4 hover:bg-muted/40 transition-colors"
-        onClick={() => setExpanded((e) => !e)}
+        onClick={() => setOpen((v) => !v)}
       >
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-          <Package className="h-5 w-5 text-primary" />
+          <ShoppingBag className="h-5 w-5 text-primary" />
         </div>
         <div className="flex-1 min-w-0">
-          <p className="font-semibold text-sm truncate">
-            {order.items.length} item{order.items.length !== 1 ? "s" : ""}
+          <p className="font-medium text-sm truncate">{date}</p>
+          <p className="text-xs text-muted-foreground mt-0.5">
+            {totalQty} item{totalQty !== 1 ? "s" : ""}
           </p>
-          <p className="text-xs text-muted-foreground mt-0.5">{date}</p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
           <span className="font-bold text-sm">${order.total_price.toFixed(2)}</span>
           <Badge variant={statusVariant(order.status)} className="capitalize text-xs">
             {order.status}
           </Badge>
-          {expanded ? (
-            <ChevronUp className="h-4 w-4 text-muted-foreground" />
-          ) : (
-            <ChevronDown className="h-4 w-4 text-muted-foreground" />
-          )}
         </div>
       </button>
-
-      {expanded && (
+      {open && (
         <div className="border-t px-5 py-4 bg-muted/20 space-y-1">
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             Items
           </p>
-          {uniqueItems.map((itemId) => {
-            const qty = order.items.filter((i) => i === itemId).length;
-            return (
-              <div key={itemId} className="flex justify-between text-sm">
-                <span className="text-muted-foreground font-mono text-xs truncate max-w-[260px]">
-                  {itemId}
-                </span>
-                {qty > 1 && (
-                  <span className="text-muted-foreground text-xs ml-2">×{qty}</span>
-                )}
-              </div>
-            );
-          })}
+          {order.items.map((item) => (
+            <div key={item.inventory_id} className="flex justify-between text-sm">
+              <span>
+                {item.name} <span className="text-muted-foreground">×{item.quantity}</span>
+              </span>
+              <span className="text-muted-foreground">${(item.price * item.quantity).toFixed(2)}</span>
+            </div>
+          ))}
           <p className="text-xs text-muted-foreground pt-2">
             Order ID: <span className="font-mono">{order.id}</span>
           </p>

@@ -397,13 +397,12 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
     setApiError(null);
     try {
       const { apiRequest } = await import("@/lib/queryClient");
-      const orderItems = items.flatMap(({ id, quantity }) =>
-        Array<string>(quantity).fill(id)
-      );
+      const orderItems = items.map(({ id, quantity }) => ({
+        inventory_id: id,
+        quantity,
+      }));
       await apiRequest("POST", "/order/create-order", {
         items: orderItems,
-        total_price: total,
-        status: "pending",
       });
       onSuccess();
     } catch (err: unknown) {

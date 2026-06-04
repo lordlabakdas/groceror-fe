@@ -18,11 +18,18 @@ import { ClipboardList, RefreshCw } from "lucide-react";
 // Types
 // ---------------------------------------------------------------------------
 
+interface StoreOrderLineItem {
+  inventory_id: string;
+  name: string;
+  quantity: number;
+  price: number;
+}
+
 interface StoreOrder {
   id: string;
   total_price: number;
   status: string;
-  item_names: string[];
+  items: StoreOrderLineItem[];
   order_date: string;
 }
 
@@ -65,12 +72,6 @@ type FilterTab = (typeof FILTER_TABS)[number];
 // Helpers
 // ---------------------------------------------------------------------------
 
-function groupItems(names: string[]): { name: string; qty: number }[] {
-  const counts: Record<string, number> = {};
-  for (const n of names) counts[n] = (counts[n] ?? 0) + 1;
-  return Object.entries(counts).map(([name, qty]) => ({ name, qty }));
-}
-
 function shortId(id: string) {
   return id.slice(0, 8).toUpperCase();
 }
@@ -95,7 +96,7 @@ interface OrderCardProps {
 }
 
 function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
-  const items = groupItems(order.item_names);
+  const items = order.items;
   const badgeCls = STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground";
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
 
@@ -112,10 +113,10 @@ function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
       </div>
 
       <div className="space-y-1">
-        {items.map(({ name, qty }) => (
-          <div key={name} className="flex justify-between text-sm">
-            <span className="text-foreground">{name}</span>
-            <span className="text-muted-foreground tabular-nums">× {qty}</span>
+        {items.map((item) => (
+          <div key={item.inventory_id} className="flex justify-between text-sm">
+            <span className="text-foreground">{item.name}</span>
+            <span className="text-muted-foreground tabular-nums">× {item.quantity}</span>
           </div>
         ))}
       </div>
