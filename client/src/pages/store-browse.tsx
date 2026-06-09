@@ -4,7 +4,8 @@ import { useRoute, Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, ShoppingCart, ChevronLeft, Check, MapPin, Globe } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus } from "lucide-react";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { type GetStoreInventoryResponse, type Product } from "@/types/models";
 import { getProductImage } from "@/lib/catalog";
@@ -23,7 +24,7 @@ export default function StoreBrowse() {
   const storeId = params?.id ?? "";
 
   const [search, setSearch] = useState("");
-  const [recentlyAdded, setRecentlyAdded] = useState<Set<string>>(new Set());
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { data: store } = useQuery<StoreDetail>({
     queryKey: [`/stores/${storeId}`],
@@ -35,7 +36,7 @@ export default function StoreBrowse() {
     enabled: !!storeId,
   });
 
-  const { state: cartState, openCart } = useCart();
+  const { state: cartState, dispatch, openCart } = useCart();
   const addToCart = useAddToCart();
 
   const storeName = store?.name ?? "Store";
@@ -56,27 +57,24 @@ export default function StoreBrowse() {
     p.name.toLowerCase().includes(search.toLowerCase())
   );
 
-  const cartItemIds = new Set(cartState.items.map((i) => i.id));
+  const cartItemMap = new Map(cartState.items.map((i) => [i.id, i.quantity]));
 
-  function handleAddToCart(product: Product) {
-    addToCart(product, 1);
-    setRecentlyAdded((prev) => {
-      const next = new Set(prev);
-      next.add(product.id);
-      return next;
-    });
-    setTimeout(() => {
-      setRecentlyAdded((prev) => {
-        const next = new Set(prev);
-        next.delete(product.id);
-        return next;
-      });
-    }, 2000);
+  function handleIncrement(product: Product) {
+    const current = cartItemMap.get(product.id) ?? 0;
+    dispatch({ type: "UPDATE_QUANTITY", payload: { id: product.id, quantity: current + 1 } });
+  }
+
+  function handleDecrement(product: Product) {
+    const current = cartItemMap.get(product.id) ?? 0;
+    if (current <= 1) {
+      dispatch({ type: "REMOVE_ITEM", payload: product.id });
+    } else {
+      dispatch({ type: "UPDATE_QUANTITY", payload: { id: product.id, quantity: current - 1 } });
+    }
   }
 
   return (
     <div className="space-y-6">
-      {/* breadcrumb + store header */}
       <div className="space-y-3">
         <Link href="/stores">
           <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
@@ -153,30 +151,46 @@ export default function StoreBrowse() {
             <ProductCard
               key={product.id}
               product={product}
-              inCart={cartItemIds.has(product.id)}
-              justAdded={recentlyAdded.has(product.id)}
-              onAdd={() => handleAddToCart(product)}
+              cartQuantity={cartItemMap.get(product.id) ?? 0}
+              onAdd={() => addToCart(product, 1)}
+              onIncrement={() => handleIncrement(product)}
+              onDecrement={() => handleDecrement(product)}
+              onProductClick={() => setSelectedProduct(product)}
             />
           ))}
         </div>
       )}
+
+      <ProductDetailModal
+        product={selectedProduct}
+        cartQuantity={selectedProduct ? (cartItemMap.get(selectedProduct.id) ?? 0) : 0}
+        onClose={() => setSelectedProduct(null)}
+        onAdd={() => selectedProduct && addToCart(selectedProduct, 1)}
+        onIncrement={() => selectedProduct && handleIncrement(selectedProduct)}
+        onDecrement={() => selectedProduct && handleDecrement(selectedProduct)}
+      />
     </div>
   );
 }
 
 interface ProductCardProps {
   product: Product;
-  inCart: boolean;
-  justAdded: boolean;
+  cartQuantity: number;
   onAdd: () => void;
+  onIncrement: () => void;
+  onDecrement: () => void;
+  onProductClick: () => void;
 }
 
-function ProductCard({ product, inCart, justAdded, onAdd }: ProductCardProps) {
+function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, onProductClick }: ProductCardProps) {
   const outOfStock = product.stock <= 0;
 
   return (
     <div className="rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
-      <div className="relative h-48 overflow-hidden bg-muted">
+      <div
+        className="relative h-48 overflow-hidden bg-muted cursor-pointer"
+        onClick={onProductClick}
+      >
         <img
           src={product.imageUrl}
           alt={product.name}
@@ -197,32 +211,116 @@ function ProductCard({ product, inCart, justAdded, onAdd }: ProductCardProps) {
         )}
       </div>
       <div className="p-3 flex items-center justify-between">
-        <div>
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={onProductClick}>
           <p className="font-semibold text-sm leading-tight">{product.name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">${product.price}</p>
         </div>
-        <Button
-          size="sm"
-          variant={justAdded ? "secondary" : "default"}
-          className="ml-2 flex-shrink-0"
-          onClick={onAdd}
-          disabled={outOfStock || justAdded}
-        >
-          {justAdded ? (
-            <>
-              <Check className="h-3 w-3 mr-1" />
-              Added
-            </>
-          ) : inCart ? (
-            <>
-              <ShoppingCart className="h-3 w-3 mr-1" />
-              Add more
-            </>
-          ) : (
-            "Add"
-          )}
-        </Button>
+        {cartQuantity > 0 ? (
+          <div className="flex items-center gap-1 ml-2 flex-shrink-0">
+            <Button size="icon" variant="outline" className="h-7 w-7" onClick={onDecrement}>
+              <Minus className="h-3 w-3" />
+            </Button>
+            <span className="w-5 text-center text-sm font-semibold">{cartQuantity}</span>
+            <Button
+              size="icon"
+              variant="default"
+              className="h-7 w-7"
+              onClick={onIncrement}
+              disabled={outOfStock}
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+        ) : (
+          <Button
+            size="sm"
+            className="ml-2 flex-shrink-0"
+            onClick={onAdd}
+            disabled={outOfStock}
+          >
+            Add
+          </Button>
+        )}
       </div>
     </div>
+  );
+}
+
+interface ProductDetailModalProps {
+  product: Product | null;
+  cartQuantity: number;
+  onClose: () => void;
+  onAdd: () => void;
+  onIncrement: () => void;
+  onDecrement: () => void;
+}
+
+function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement, onDecrement }: ProductDetailModalProps) {
+  if (!product) return null;
+
+  const outOfStock = product.stock <= 0;
+
+  return (
+    <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="sm:max-w-md p-0 overflow-hidden">
+        <div className="relative h-56 bg-muted">
+          <img
+            src={product.imageUrl}
+            alt={product.name}
+            className="w-full h-full object-cover"
+          />
+          <Badge
+            variant="secondary"
+            className="absolute top-3 left-3 text-xs font-medium backdrop-blur-sm bg-card/80"
+          >
+            {product.category}
+          </Badge>
+        </div>
+        <div className="p-5 space-y-4">
+          <DialogHeader>
+            <DialogTitle className="text-xl">{product.name}</DialogTitle>
+          </DialogHeader>
+
+          <div className="flex items-center justify-between">
+            <span className="text-2xl font-bold text-primary">${product.price}</span>
+            <span className="text-sm text-muted-foreground">
+              {outOfStock ? "Out of stock" : `${product.stock} in stock`}
+            </span>
+          </div>
+
+          {product.description && (
+            <p className="text-sm text-muted-foreground">{product.description}</p>
+          )}
+
+          {product.storeName && (
+            <p className="text-sm">
+              <span className="text-muted-foreground">Sold by </span>
+              <span className="font-medium">{product.storeName}</span>
+            </p>
+          )}
+
+          <div className="pt-1">
+            {cartQuantity > 0 ? (
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-muted-foreground">In your cart</span>
+                <div className="flex items-center gap-3">
+                  <Button size="icon" variant="outline" onClick={onDecrement}>
+                    <Minus className="h-4 w-4" />
+                  </Button>
+                  <span className="w-6 text-center font-semibold">{cartQuantity}</span>
+                  <Button size="icon" variant="default" onClick={onIncrement} disabled={outOfStock}>
+                    <Plus className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              <Button className="w-full" onClick={onAdd} disabled={outOfStock}>
+                {outOfStock ? "Out of stock" : "Add to cart"}
+              </Button>
+            )}
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
