@@ -128,6 +128,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       const loginRes = await apiRequest("POST", "/user/login", { phone, password });
       const { token } = await loginRes.json();
       login(token);
+      // Create the profile row immediately so the user is visible in the database.
+      try {
+        await apiRequest("POST", "/user/set-profile", { name: "", email: "" });
+      } catch {
+        // Non-fatal — user can set their profile later.
+      }
       toast({ title: "Account created!", description: "You're now logged in." });
       resetAndClose();
       const decoded = decodeToken(token);
