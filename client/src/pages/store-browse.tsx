@@ -9,6 +9,7 @@ import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus } from "l
 import { useAddToCart, useCart } from "@/lib/cart";
 import { type GetStoreInventoryResponse, type Product } from "@/types/models";
 import { getProductImage } from "@/lib/catalog";
+import { cn } from "@/lib/utils";
 
 interface StoreDetail {
   id: string;
@@ -24,6 +25,7 @@ export default function StoreBrowse() {
   const storeId = params?.id ?? "";
 
   const [search, setSearch] = useState("");
+  const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
 
   const { data: store } = useQuery<StoreDetail>({
@@ -53,9 +55,13 @@ export default function StoreBrowse() {
     storeName: storeName,
   }));
 
-  const filtered = products.filter((p) =>
-    p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const categories = ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
+
+  const filtered = products.filter((p) => {
+    const matchesSearch = p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesCategory = activeCategory === "All" || p.category === activeCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const cartItemMap = new Map(cartState.items.map((i) => [i.id, i.quantity]));
 
@@ -74,79 +80,126 @@ export default function StoreBrowse() {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-3">
-        <Link href="/stores">
-          <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
-            <ChevronLeft className="h-4 w-4" />
-            All Stores
-          </a>
-        </Link>
+    <div className="space-y-5">
+      {/* ── Back link ─────────────────────────────────────── */}
+      <Link href="/stores">
+        <a className="flex items-center gap-1 text-sm text-muted-foreground hover:text-foreground transition-colors w-fit">
+          <ChevronLeft className="h-4 w-4" />
+          All Stores
+        </a>
+      </Link>
 
-        <div className="flex flex-col md:flex-row md:items-start md:justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold">{storeName}</h1>
-            <div className="flex flex-wrap items-center gap-3 mt-1">
-              {store?.location && (
-                <span className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {store.location}
-                </span>
-              )}
-              {store?.website && (
-                <a
-                  href={store.website.startsWith("http") ? store.website : `https://${store.website}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
-                >
-                  <Globe className="h-3.5 w-3.5" />
-                  {store.website}
-                </a>
-              )}
-            </div>
+      {/* ── Store banner ──────────────────────────────────── */}
+      <div className="rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4 border-l-4 border-l-emerald-500/60">
+        {/* Avatar */}
+        <div
+          className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-xl"
+          style={{ background: "linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)" }}
+        >
+          {storeName.charAt(0).toUpperCase()}
+        </div>
+
+        {/* Name + meta */}
+        <div className="flex-1 min-w-0">
+          <h1 className="text-2xl font-bold truncate">{storeName}</h1>
+          <div className="flex flex-wrap items-center gap-3 mt-1">
+            {store?.location && (
+              <span className="flex items-center gap-1 text-sm text-muted-foreground">
+                <MapPin className="h-3.5 w-3.5" />
+                {store.location}
+              </span>
+            )}
+            {store?.website && (
+              <a
+                href={store.website.startsWith("http") ? store.website : `https://${store.website}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-sm text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Globe className="h-3.5 w-3.5" />
+                {store.website}
+              </a>
+            )}
           </div>
+        </div>
 
-          <div className="flex items-center gap-3 flex-shrink-0">
-            <div className="relative w-full md:w-56">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search items..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-9"
-              />
-            </div>
-            <Button
-              variant="outline"
-              size="sm"
-              className="gap-2 flex-shrink-0"
-              onClick={openCart}
+        {/* Right cluster */}
+        <div className="flex items-center gap-2 flex-shrink-0">
+          <span className="text-sm text-muted-foreground">
+            {products.length} item{products.length !== 1 ? "s" : ""}
+          </span>
+          {store && (
+            <Badge
+              className={cn(
+                "text-xs",
+                store.is_active
+                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                  : "bg-muted text-muted-foreground border-border hover:bg-muted"
+              )}
             >
-              <ShoppingCart className="h-4 w-4" />
-              Cart
-              {cartState.items.length > 0 && (
-                <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
-                  {cartState.items.reduce((s, i) => s + i.quantity, 0)}
-                </Badge>
-              )}
-            </Button>
-          </div>
+              {store.is_active ? "Open" : "Closed"}
+            </Badge>
+          )}
         </div>
       </div>
 
+      {/* ── Search + cart ─────────────────────────────────── */}
+      <div className="flex items-center gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search items..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="pl-9"
+          />
+        </div>
+        <Button variant="outline" size="sm" className="gap-2 flex-shrink-0" onClick={openCart}>
+          <ShoppingCart className="h-4 w-4" />
+          Cart
+          {cartState.items.length > 0 && (
+            <Badge className="ml-1 h-5 w-5 p-0 flex items-center justify-center text-xs">
+              {cartState.items.reduce((s, i) => s + i.quantity, 0)}
+            </Badge>
+          )}
+        </Button>
+      </div>
+
+      {/* ── Category pills ────────────────────────────────── */}
+      {categories.length > 1 && (
+        <div className="flex gap-2 flex-wrap">
+          {categories.map((cat) => (
+            <button
+              key={cat}
+              onClick={() => setActiveCategory(cat)}
+              className={cn(
+                "rounded-full px-4 py-1.5 text-sm transition-colors",
+                activeCategory === cat
+                  ? "bg-primary text-primary-foreground font-medium"
+                  : "border border-border text-muted-foreground hover:border-primary hover:text-primary"
+              )}
+            >
+              {cat}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {/* ── Product grid ──────────────────────────────────── */}
       {isLoading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
-          {[...Array(8)].map((_, i) => (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+          {[...Array(6)].map((_, i) => (
             <div key={i} className="h-64 rounded-xl border bg-muted animate-pulse" />
           ))}
         </div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16 text-muted-foreground">
-          {search ? "No items match your search." : "This store has no items yet."}
+          {search || activeCategory !== "All"
+            ? "No items match your search."
+            : "This store has no items yet."}
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
           {filtered.map((product) => (
             <ProductCard
               key={product.id}
@@ -173,6 +226,8 @@ export default function StoreBrowse() {
   );
 }
 
+// ── Product card ──────────────────────────────────────────────────────────────
+
 interface ProductCardProps {
   product: Product;
   cartQuantity: number;
@@ -196,10 +251,7 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <Badge
-          variant="secondary"
-          className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-card/80"
-        >
+        <Badge className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
           {product.category}
         </Badge>
         {outOfStock && (
@@ -210,10 +262,10 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
           </div>
         )}
       </div>
-      <div className="p-3 flex items-center justify-between">
+      <div className="p-4 flex items-center justify-between">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onProductClick}>
           <p className="font-semibold text-sm leading-tight">{product.name}</p>
-          <p className="text-xs text-muted-foreground mt-0.5">${product.price}</p>
+          <p className="text-base font-bold text-primary mt-0.5">${product.price}</p>
         </div>
         {cartQuantity > 0 ? (
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
@@ -232,12 +284,7 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
             </Button>
           </div>
         ) : (
-          <Button
-            size="sm"
-            className="ml-2 flex-shrink-0"
-            onClick={onAdd}
-            disabled={outOfStock}
-          >
+          <Button size="sm" className="ml-2 flex-shrink-0" onClick={onAdd} disabled={outOfStock}>
             Add
           </Button>
         )}
@@ -245,6 +292,8 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
     </div>
   );
 }
+
+// ── Product detail modal ──────────────────────────────────────────────────────
 
 interface ProductDetailModalProps {
   product: Product | null;
@@ -269,10 +318,7 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
             alt={product.name}
             className="w-full h-full object-cover"
           />
-          <Badge
-            variant="secondary"
-            className="absolute top-3 left-3 text-xs font-medium backdrop-blur-sm bg-card/80"
-          >
+          <Badge className="absolute top-3 left-3 text-xs font-medium backdrop-blur-sm bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
             {product.category}
           </Badge>
         </div>

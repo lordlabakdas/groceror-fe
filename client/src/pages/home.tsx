@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
-import { ShoppingBasket, BarChart3, Smartphone, Store, ShoppingCart } from "lucide-react";
+import { ShoppingBasket, BarChart3, Smartphone, Store, ShoppingCart, CheckCircle } from "lucide-react";
 
 const FEATURES = [
   {
@@ -23,6 +23,37 @@ const FEATURES = [
     description:
       "No emails, no hassle. Register and log in with just your phone number and a one-time code.",
   },
+];
+
+const HOW_IT_WORKS = [
+  {
+    step: "1",
+    icon: <Store className="h-6 w-6" />,
+    title: "Browse Stores",
+    desc: "Find grocery stores near you and explore their live inventory.",
+  },
+  {
+    step: "2",
+    icon: <ShoppingCart className="h-6 w-6" />,
+    title: "Fill Your Cart",
+    desc: "Add fresh products as you browse — cart syncs instantly.",
+  },
+  {
+    step: "3",
+    icon: <CheckCircle className="h-6 w-6" />,
+    title: "Place Your Order",
+    desc: "One-tap checkout. Your order goes straight to the store.",
+  },
+];
+
+// [emoji, top, side, size, opacity, rotate, animDelay]
+const HERO_EMOJIS: [string, string, string, string, string, string, string][] = [
+  ["🥦", "top-10",    "left-[8%]",   "text-5xl", "opacity-20", "rotate-[-15deg]", "0s"],
+  ["🍊", "top-24",    "right-[7%]",  "text-4xl", "opacity-20", "rotate-[12deg]",  "0.6s"],
+  ["🥕", "bottom-20", "left-[12%]",  "text-4xl", "opacity-15", "rotate-[8deg]",   "1.1s"],
+  ["🍅", "bottom-16", "right-[10%]", "text-5xl", "opacity-15", "rotate-[-10deg]", "1.7s"],
+  ["🧀", "top-1/2",   "left-[4%]",   "text-3xl", "opacity-10", "",                "0.3s"],
+  ["🍞", "top-1/3",   "right-[4%]",  "text-3xl", "opacity-10", "",                "2.1s"],
 ];
 
 export default function Home() {
@@ -52,13 +83,22 @@ export default function Home() {
           }}
         />
 
-        {/* floating food blobs — decorative */}
-        <span className="absolute top-10 left-[8%]  text-5xl opacity-20 rotate-[-15deg] select-none">🥦</span>
-        <span className="absolute top-24 right-[7%] text-4xl opacity-20 rotate-[12deg]  select-none">🍊</span>
-        <span className="absolute bottom-20 left-[12%] text-4xl opacity-15 rotate-[8deg] select-none">🥕</span>
-        <span className="absolute bottom-16 right-[10%] text-5xl opacity-15 rotate-[-10deg] select-none">🍅</span>
-        <span className="absolute top-1/2 left-[4%]  text-3xl opacity-10 select-none">🧀</span>
-        <span className="absolute top-1/3 right-[4%] text-3xl opacity-10 select-none">🍞</span>
+        {/* floating food blobs — animated */}
+        {HERO_EMOJIS.map(([emoji, top, side, size, opacity, rotate, delay]) => (
+          <span
+            key={emoji + side}
+            className={`absolute ${top} ${side} ${size} ${opacity} ${rotate} select-none`}
+          >
+            <span
+              style={{
+                display: "inline-block",
+                animation: `float 3.5s ease-in-out ${delay} infinite`,
+              }}
+            >
+              {emoji}
+            </span>
+          </span>
+        ))}
 
         {/* logo */}
         <div className="relative z-10 mb-6">
@@ -198,6 +238,34 @@ export default function Home() {
                 </div>
                 <h3 className="text-xl font-semibold mb-2">{f.title}</h3>
                 <p className="text-muted-foreground leading-relaxed">{f.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── How it works ─────────────────────────────────────── */}
+      <section className="py-20 px-4 border-y" style={{ background: "hsl(var(--muted) / 0.3)" }}>
+        <div className="max-w-4xl mx-auto">
+          <p className="text-center text-sm font-semibold tracking-widest text-primary uppercase mb-2">
+            Simple by design
+          </p>
+          <h2 className="text-center text-3xl md:text-4xl font-bold mb-14">
+            How Groceror works
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10">
+            {HOW_IT_WORKS.map(({ step, icon, title, desc }) => (
+              <div key={step} className="relative flex flex-col items-center text-center">
+                <div className="relative mb-5">
+                  <span className="absolute -top-5 -left-4 text-8xl font-black text-primary/10 select-none leading-none pointer-events-none">
+                    {step}
+                  </span>
+                  <div className="relative z-10 w-14 h-14 rounded-2xl bg-primary/10 text-primary flex items-center justify-center">
+                    {icon}
+                  </div>
+                </div>
+                <h3 className="font-semibold text-lg mb-2">{title}</h3>
+                <p className="text-muted-foreground text-sm leading-relaxed">{desc}</p>
               </div>
             ))}
           </div>
