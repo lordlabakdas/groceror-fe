@@ -38,7 +38,7 @@ export function PasswordStrength({ password }: PasswordStrengthProps) {
     if (strength <= 25) return "bg-destructive";
     if (strength <= 50) return "bg-yellow-500";
     if (strength <= 75) return "bg-blue-500";
-    return "bg-green-500";
+    return "bg-amber-500";
   };
 
   const strength = calculateStrength(password);

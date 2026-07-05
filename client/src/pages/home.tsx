@@ -71,7 +71,7 @@ export default function Home() {
       <section
         className="relative flex-1 flex flex-col items-center justify-center text-center px-4 py-20 overflow-hidden"
         style={{
-          background: "linear-gradient(160deg, #0a2614 0%, #14532d 50%, #166534 100%)",
+          background: "linear-gradient(160deg, #07091a 0%, #0d1220 50%, #111827 100%)",
         }}
       >
         {/* subtle radial glow */}
@@ -79,7 +79,7 @@ export default function Home() {
           className="absolute inset-0 pointer-events-none"
           style={{
             background:
-              "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(34,197,94,0.12) 0%, transparent 70%)",
+              "radial-gradient(ellipse 70% 60% at 50% 40%, rgba(245,158,11,0.12) 0%, transparent 70%)",
           }}
         />
 
@@ -114,10 +114,10 @@ export default function Home() {
           <h1 className="text-6xl md:text-8xl font-extrabold text-white tracking-tight leading-none">
             Groceror
           </h1>
-          <p className="mt-2 flex items-center justify-center gap-2 text-emerald-400 text-sm md:text-base font-medium tracking-widest uppercase">
-            <span className="block h-px w-8 bg-emerald-500" />
+          <p className="mt-2 flex items-center justify-center gap-2 text-amber-400 text-sm md:text-base font-medium tracking-widest uppercase">
+            <span className="block h-px w-8 bg-amber-500" />
             From Grocer to Sorceror
-            <span className="block h-px w-8 bg-emerald-500" />
+            <span className="block h-px w-8 bg-amber-500" />
           </p>
         </div>
 
@@ -131,7 +131,7 @@ export default function Home() {
         <div className="relative z-10 mt-10 flex flex-col sm:flex-row gap-4 justify-center">
           <Button
             size="lg"
-            className="text-base px-10 py-6 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold shadow-lg shadow-emerald-900/40 transition-all duration-200 hover:scale-105"
+            className="text-base px-10 py-6 bg-amber-500 hover:bg-amber-400 text-gray-900 font-semibold shadow-lg shadow-amber-900/40 transition-all duration-200 hover:scale-105"
             onClick={() => openLogin("login")}
           >
             Login
@@ -139,7 +139,7 @@ export default function Home() {
           <Button
             size="lg"
             variant="outline"
-            className="text-base px-10 py-6 border-2 border-emerald-500 text-emerald-300 hover:bg-emerald-500 hover:text-white font-semibold transition-all duration-200 hover:scale-105 bg-transparent"
+            className="text-base px-10 py-6 border-2 border-amber-500 text-amber-300 hover:bg-amber-500 hover:text-gray-900 font-semibold transition-all duration-200 hover:scale-105 bg-transparent"
             onClick={() => openLogin("register")}
           >
             Get Started →
@@ -147,15 +147,15 @@ export default function Home() {
         </div>
 
         {/* trust badges */}
-        <div className="relative z-10 mt-10 flex flex-wrap gap-6 justify-center text-sm text-emerald-300/70">
+        <div className="relative z-10 mt-10 flex flex-wrap gap-6 justify-center text-sm text-amber-300/70">
           <span className="flex items-center gap-1.5">
-            <span className="text-emerald-400">✓</span> No credit card required
+            <span className="text-amber-400">✓</span> No credit card required
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-emerald-400">✓</span> Phone OTP login
+            <span className="text-amber-400">✓</span> Phone OTP login
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-emerald-400">✓</span> Free to use
+            <span className="text-amber-400">✓</span> Free to use
           </span>
         </div>
 
@@ -275,17 +275,17 @@ export default function Home() {
       {/* ── Bottom CTA strip ─────────────────────────────────── */}
       <section
         className="py-16 px-4 text-center"
-        style={{ background: "linear-gradient(135deg, #14532d 0%, #166534 100%)" }}
+        style={{ background: "linear-gradient(135deg, #92400e 0%, #b45309 100%)" }}
       >
         <h2 className="text-2xl md:text-3xl font-bold text-white mb-3">
           Ready to transform your store?
         </h2>
-        <p className="text-emerald-200 mb-8 text-base">
+        <p className="text-amber-200 mb-8 text-base">
           Join groceror today — it only takes a minute.
         </p>
         <Button
           size="lg"
-          className="bg-white text-emerald-800 hover:bg-emerald-50 font-semibold px-10 py-6 text-base transition-all duration-200 hover:scale-105 shadow-lg"
+          className="bg-gray-900 text-amber-400 hover:bg-gray-800 font-semibold px-10 py-6 text-base transition-all duration-200 hover:scale-105 shadow-lg border border-amber-500/30"
           onClick={() => openLogin("register")}
         >
           Create your account →

@@ -266,7 +266,7 @@ function MapView({
       >
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
         />
         {mappable.map((store) => (
           <Marker
@@ -277,7 +277,7 @@ function MapView({
           >
             <Popup>
               <div className="space-y-1.5 min-w-[160px]">
-                <p className="font-semibold text-sm text-emerald-400">{store.name}</p>
+                <p className="font-semibold text-sm text-amber-400">{store.name}</p>
                 {store.location && (
                   <p className="text-xs flex items-center gap-1 text-muted-foreground">
                     <MapPin className="h-3 w-3 inline flex-shrink-0" />
@@ -288,7 +288,7 @@ function MapView({
                   className={cn(
                     "inline-block text-xs px-2 py-0.5 rounded-full",
                     store.is_active
-                      ? "bg-emerald-500/20 text-emerald-400"
+                      ? "bg-emerald-500/20 text-amber-400"
                       : "bg-muted text-muted-foreground"
                   )}
                 >
@@ -348,15 +348,15 @@ function StoreCard({
             "block rounded-xl border bg-card shadow-md hover:shadow-lg transition-all cursor-pointer group p-4",
             "border-l-4",
             isHighlighted
-              ? "border-l-emerald-500 shadow-emerald-500/10 shadow-lg"
-              : "border-l-transparent hover:border-l-emerald-500/50"
+              ? "border-l-amber-500 shadow-emerald-500/10 shadow-lg"
+              : "border-l-transparent hover:border-l-amber-500/50"
           )}
         >
           <div className="flex items-center gap-3">
             {/* Store initial avatar */}
             <div
               className="w-10 h-10 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-sm"
-              style={{ background: "linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)" }}
+              style={{ background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)" }}
             >
               {initial}
             </div>
@@ -383,7 +383,7 @@ function StoreCard({
               className={cn(
                 "text-xs flex-shrink-0",
                 store.is_active
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
                   : "bg-muted text-muted-foreground border-border hover:bg-muted"
               )}
             >
