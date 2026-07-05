@@ -425,7 +425,9 @@ export default function Inventory() {
   // stats
   const totalValue = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
-  const lowStockCount = items.filter((i) => i.quantity < 5).length;
+  // Matches the "Low Stock" badge tier in stockStatus and the dashboard's
+  // default threshold.
+  const lowStockCount = items.filter((i) => i.quantity < 20).length;
 
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
