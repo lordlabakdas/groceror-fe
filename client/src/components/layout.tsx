@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle } from "lucide-react";
+import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
@@ -100,6 +100,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Link href="/alerts">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/alerts", location, true)}>Price Alerts</a>
                     </Link>
+                    <Link href="/wishlist">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/wishlist", location, true)}>Wishlist</a>
+                    </Link>
+                    <Link href="/scheduled-orders">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/scheduled-orders", location, true)}>Recurring Orders</a>
+                    </Link>
                     <Link href="/disputes">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/disputes", location, true)}>Disputes</a>
                     </Link>
@@ -166,6 +172,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </a>
                 </Link>
                 <Link href="/alerts"><a className={`${navCls("/alerts", location)} flex items-center gap-1`}><Bell className="h-3 w-3" />Alerts</a></Link>
+                <Link href="/wishlist"><a className={`${navCls("/wishlist", location)} flex items-center gap-1`}><Heart className="h-3 w-3" />Wishlist</a></Link>
+                <Link href="/scheduled-orders"><a className={`${navCls("/scheduled-orders", location)} flex items-center gap-1`}><CalendarClock className="h-3 w-3" />Recurring</a></Link>
                 <Link href="/disputes"><a className={`${navCls("/disputes", location)} flex items-center gap-1`}><AlertTriangle className="h-3 w-3" />Disputes</a></Link>
               </nav>
             )}

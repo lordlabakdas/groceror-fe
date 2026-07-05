@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus, Star } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus, Star, Heart } from "lucide-react";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/queryClient";
@@ -188,6 +188,8 @@ export default function StoreBrowse() {
   const [search, setSearch] = useState("");
   const [activeCategory, setActiveCategory] = useState("All");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: store } = useQuery<StoreDetail>({
     queryKey: [`/stores/${storeId}`],
@@ -201,6 +203,29 @@ export default function StoreBrowse() {
 
   const { state: cartState, dispatch, openCart } = useCart();
   const addToCart = useAddToCart();
+  const { toast } = useToast();
+
+  // ── Wishlist ──────────────────────────────────────────────────────────────
+  const isLoggedInShopper = user?.entityType === "user";
+  const { data: wishlistData } = useQuery<{ inventory_id: string }[]>({
+    queryKey: ["/wishlist"],
+    enabled: isLoggedInShopper,
+  });
+  const wishlistSet = new Set((wishlistData ?? []).map((w) => w.inventory_id));
+
+  const toggleWishlistMutation = useMutation({
+    mutationFn: async ({ inventoryId, inList }: { inventoryId: string; inList: boolean }) => {
+      if (inList) {
+        await apiRequest("DELETE", `/wishlist/${inventoryId}`);
+      } else {
+        await apiRequest("POST", "/wishlist", { inventory_id: inventoryId });
+      }
+    },
+    onSuccess: (_, { inList }) => {
+      queryClient.invalidateQueries({ queryKey: ["/wishlist"] });
+      toast({ description: inList ? "Removed from wishlist" : "Added to wishlist" });
+    },
+  });
 
   const storeName = store?.name ?? "Store";
 
@@ -376,6 +401,8 @@ export default function StoreBrowse() {
               onIncrement={() => handleIncrement(product)}
               onDecrement={() => handleDecrement(product)}
               onProductClick={() => setSelectedProduct(product)}
+              wishlisted={wishlistSet.has(product.id)}
+              onToggleWishlist={isLoggedInShopper ? () => toggleWishlistMutation.mutate({ inventoryId: product.id, inList: wishlistSet.has(product.id) }) : undefined}
             />
           ))}
         </div>
@@ -388,6 +415,7 @@ export default function StoreBrowse() {
         onAdd={() => selectedProduct && addToCart(selectedProduct, 1)}
         onIncrement={() => selectedProduct && handleIncrement(selectedProduct)}
         onDecrement={() => selectedProduct && handleDecrement(selectedProduct)}
+        isLoggedInShopper={isLoggedInShopper}
       />
 
       {/* ── Ratings ───────────────────────────────────────── */}
@@ -405,9 +433,11 @@ interface ProductCardProps {
   onIncrement: () => void;
   onDecrement: () => void;
   onProductClick: () => void;
+  wishlisted?: boolean;
+  onToggleWishlist?: () => void;
 }
 
-function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, onProductClick }: ProductCardProps) {
+function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, onProductClick, wishlisted, onToggleWishlist }: ProductCardProps) {
   const outOfStock = product.stock <= 0;
 
   return (
@@ -430,6 +460,14 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
               Out of stock
             </span>
           </div>
+        )}
+        {onToggleWishlist && (
+          <button
+            className="absolute top-2 right-2 p-1.5 rounded-full bg-black/30 backdrop-blur-sm hover:bg-black/50 transition-colors"
+            onClick={(e) => { e.stopPropagation(); onToggleWishlist(); }}
+          >
+            <Heart className={cn("h-4 w-4", wishlisted ? "fill-rose-400 text-rose-400" : "text-white")} />
+          </button>
         )}
       </div>
       <div className="p-4 flex items-center justify-between">
@@ -472,6 +510,21 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
 
 // ── Product detail modal ──────────────────────────────────────────────────────
 
+interface ProductReviewAPI {
+  id: string;
+  user_id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+interface ProductReviewSummary {
+  avg_rating: number | null;
+  review_count: number;
+  reviews: ProductReviewAPI[];
+  my_review: ProductReviewAPI | null;
+}
+
 interface ProductDetailModalProps {
   product: Product | null;
   cartQuantity: number;
@@ -479,9 +532,47 @@ interface ProductDetailModalProps {
   onAdd: () => void;
   onIncrement: () => void;
   onDecrement: () => void;
+  isLoggedInShopper: boolean;
 }
 
-function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement, onDecrement }: ProductDetailModalProps) {
+function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement, onDecrement, isLoggedInShopper }: ProductDetailModalProps) {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewComment, setReviewComment] = useState("");
+  const [showReviewForm, setShowReviewForm] = useState(false);
+
+  const { data: reviewData } = useQuery<ProductReviewSummary>({
+    queryKey: [`/product-reviews/${product?.id}`],
+    enabled: !!product,
+  });
+
+  const submitReviewMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/product-reviews", {
+        inventory_id: product?.id,
+        rating: reviewRating,
+        comment: reviewComment || null,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/product-reviews/${product?.id}`] });
+      setShowReviewForm(false);
+      setReviewComment("");
+      toast({ description: "Review submitted" });
+    },
+  });
+
+  const deleteReviewMutation = useMutation({
+    mutationFn: async (reviewId: string) => {
+      await apiRequest("DELETE", `/product-reviews/${reviewId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/product-reviews/${product?.id}`] });
+      toast({ description: "Review removed" });
+    },
+  });
+
   if (!product) return null;
 
   const outOfStock = product.stock <= 0;
@@ -549,6 +640,74 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
               <Button className="w-full" onClick={onAdd} disabled={outOfStock}>
                 {outOfStock ? "Out of stock" : "Add to cart"}
               </Button>
+            )}
+          </div>
+
+          {/* ── Product reviews ─────────────────────────── */}
+          <div className="border-t pt-4 space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold">Reviews</span>
+                {reviewData?.avg_rating && (
+                  <StarDisplay rating={reviewData.avg_rating} count={reviewData.review_count} />
+                )}
+              </div>
+              {isLoggedInShopper && !reviewData?.my_review && !showReviewForm && (
+                <Button variant="ghost" size="sm" onClick={() => setShowReviewForm(true)}>
+                  Write a review
+                </Button>
+              )}
+            </div>
+
+            {showReviewForm && (
+              <div className="space-y-2 p-3 rounded-lg bg-muted/40">
+                <StarPicker value={reviewRating} onChange={setReviewRating} />
+                <Textarea
+                  placeholder="Share your thoughts (optional)"
+                  value={reviewComment}
+                  onChange={(e) => setReviewComment(e.target.value)}
+                  className="text-sm"
+                  rows={2}
+                />
+                <div className="flex gap-2">
+                  <Button size="sm" onClick={() => submitReviewMutation.mutate()} disabled={submitReviewMutation.isPending}>
+                    Submit
+                  </Button>
+                  <Button size="sm" variant="ghost" onClick={() => setShowReviewForm(false)}>Cancel</Button>
+                </div>
+              </div>
+            )}
+
+            {reviewData?.my_review && (
+              <div className="p-3 rounded-lg bg-muted/40 space-y-1">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-1">
+                    {[1,2,3,4,5].map(i => (
+                      <Star key={i} className={cn("h-3.5 w-3.5", i <= reviewData.my_review!.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
+                    ))}
+                    <span className="text-xs text-muted-foreground ml-1">Your review</span>
+                  </div>
+                  <Button variant="ghost" size="sm" className="h-6 text-xs text-muted-foreground" onClick={() => deleteReviewMutation.mutate(reviewData.my_review!.id)}>
+                    Remove
+                  </Button>
+                </div>
+                {reviewData.my_review.comment && <p className="text-sm text-muted-foreground">{reviewData.my_review.comment}</p>}
+              </div>
+            )}
+
+            {(reviewData?.reviews ?? []).filter(r => r.id !== reviewData?.my_review?.id).slice(0, 3).map(r => (
+              <div key={r.id} className="space-y-1">
+                <div className="flex items-center gap-1">
+                  {[1,2,3,4,5].map(i => (
+                    <Star key={i} className={cn("h-3 w-3", i <= r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
+                  ))}
+                </div>
+                {r.comment && <p className="text-xs text-muted-foreground">{r.comment}</p>}
+              </div>
+            ))}
+
+            {(reviewData?.review_count ?? 0) === 0 && !showReviewForm && (
+              <p className="text-xs text-muted-foreground">No reviews yet.</p>
             )}
           </div>
         </div>

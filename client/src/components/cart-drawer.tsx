@@ -1,9 +1,10 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package } from "lucide-react";
+import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCart, type CartItem } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
 import { apiRequest } from "@/lib/queryClient";
@@ -366,6 +367,10 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   const [touched, setTouched] = useState<Partial<Record<keyof CardForm, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [scheduleFreq, setScheduleFreq] = useState<string | null>(null);
+  const [scheduling, setScheduling] = useState(false);
+
+  const { toast } = useToast();
 
   // Coupon state
   const [couponInput, setCouponInput] = useState("");
@@ -637,7 +642,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       </div>
 
       {/* Sticky CTA */}
-      <div className="border-t px-4 py-4 flex-shrink-0">
+      <div className="border-t px-4 py-4 flex-shrink-0 space-y-2">
         <Button className="w-full" disabled={submitting} onClick={handlePlaceOrder}>
           {submitting ? (
             <span className="flex items-center gap-2">
@@ -648,6 +653,46 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
             `Place Order — $${finalTotal.toFixed(2)}`
           )}
         </Button>
+
+        {/* Schedule recurring */}
+        <div className="flex items-center gap-2">
+          <Select value={scheduleFreq ?? ""} onValueChange={(v) => setScheduleFreq(v || null)}>
+            <SelectTrigger className="flex-1 h-8 text-xs">
+              <SelectValue placeholder="Schedule recurring…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="weekly">Every week</SelectItem>
+              <SelectItem value="biweekly">Every 2 weeks</SelectItem>
+              <SelectItem value="monthly">Every month</SelectItem>
+            </SelectContent>
+          </Select>
+          {scheduleFreq && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs flex-shrink-0"
+              disabled={scheduling}
+              onClick={async () => {
+                setScheduling(true);
+                try {
+                  await apiRequest("POST", "/scheduled-orders", {
+                    frequency: scheduleFreq,
+                    items: items.map((i) => ({ inventory_id: i.id, quantity: i.quantity })),
+                  });
+                  toast({ description: "Recurring order saved" });
+                  setScheduleFreq(null);
+                } catch {
+                  toast({ description: "Could not save recurring order", variant: "destructive" });
+                } finally {
+                  setScheduling(false);
+                }
+              }}
+            >
+              <CalendarClock className="h-3.5 w-3.5 mr-1" />
+              Save
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   );
