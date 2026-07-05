@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
+import { TopSellersChart, OrdersByStatusChart } from "@/components/dashboard-charts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -194,6 +195,14 @@ export default function Dashboard() {
         />
         <KpiCard label="Expiring Soon" value={data.expiring_soon.length} color="amber" />
       </div>
+
+      {/* Charts row */}
+      {(data.top_sellers.length > 0 || data.todays_summary.orders.length > 0) && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <TopSellersChart items={data.top_sellers} />
+          <OrdersByStatusChart orders={data.todays_summary.orders} />
+        </div>
+      )}
 
       {/* 2×2 panel grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
