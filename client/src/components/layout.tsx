@@ -7,6 +7,8 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { CartDrawer } from "@/components/cart-drawer";
+import { useOrderAlerts } from "@/hooks/use-order-alerts";
+import { CommandPalette } from "@/components/command-palette";
 
 function navCls(href: string, current: string, mobile = false) {
   const active = current === href || current.startsWith(href + "/");
@@ -25,6 +27,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
   const [location] = useLocation();
 
   const totalItems = state.items.reduce((acc, item) => acc + item.quantity, 0);
+
+  // Chime + toast + browser notification when a new order lands.
+  useOrderAlerts(user?.entityType === "store");
 
   return (
     <div className="min-h-screen bg-background">
@@ -200,6 +205,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
       <ProfileSheet open={profileOpen} onClose={() => setProfileOpen(false)} />
       <CartDrawer open={cartOpen} onClose={closeCart} />
+      <CommandPalette />
     </div>
   );
 }

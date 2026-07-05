@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { InventoryCsvControls } from "@/components/inventory-csv";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -64,6 +65,22 @@ function stockStatus(qty: number): { label: string; color: string } {
   if (qty < 5) return { label: "Critical", color: "bg-red-900/30 text-red-400" };
   if (qty < 20) return { label: "Low Stock", color: "bg-amber-900/30 text-amber-400" };
   return { label: "In Stock", color: "bg-primary/15 text-primary" };
+}
+
+function expiryStatus(expiryDate?: string | null): { label: string; color: string } | null {
+  if (!expiryDate) return null;
+  const [y, m, d] = expiryDate.split("-").map(Number);
+  const expiry = new Date(y, m - 1, d);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const days = Math.round((expiry.getTime() - today.getTime()) / 86_400_000);
+  if (days < 0) return null;
+  if (days === 0) return { label: "Expires today", color: "bg-red-900/30 text-red-400" };
+  if (days <= 7) return { label: `Expires in ${days}d`, color: "bg-amber-900/30 text-amber-400" };
+  return {
+    label: `Expires ${expiry.toLocaleDateString([], { month: "short", day: "numeric" })}`,
+    color: "bg-muted text-muted-foreground",
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -295,6 +312,7 @@ interface InventoryCardProps {
 function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
+  const expiry = expiryStatus(item.expiry_date);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
   const categoryColor = CATEGORY_COLOR[item.category] ?? "bg-secondary text-muted-foreground";
 
@@ -359,9 +377,16 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
           <span className="text-2xl font-bold text-primary">
             ${item.price.toFixed(2)}
           </span>
-          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor}`}>
-            {stockLabel}
-          </span>
+          <div className="flex flex-col items-end gap-1">
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor}`}>
+              {stockLabel}
+            </span>
+            {expiry && (
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${expiry.color}`}>
+                {expiry.label}
+              </span>
+            )}
+          </div>
         </div>
 
         <div className="flex items-center justify-between text-sm">
@@ -424,7 +449,9 @@ export default function Inventory() {
   // stats
   const totalValue = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
   const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
-  const lowStockCount = items.filter((i) => i.quantity < 5).length;
+  // Matches the "Low Stock" badge tier in stockStatus and the dashboard's
+  // default threshold.
+  const lowStockCount = items.filter((i) => i.quantity < 20).length;
 
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
@@ -472,16 +499,19 @@ export default function Inventory() {
             {items.length} {items.length === 1 ? "item" : "items"} in your store
           </p>
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => refetch()}
-          disabled={isFetching}
-          className="gap-2"
-        >
-          <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2">
+          <InventoryCsvControls items={items} />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => refetch()}
+            disabled={isFetching}
+            className="gap-2"
+          >
+            <RefreshCw className={`h-4 w-4 ${isFetching ? "animate-spin" : ""}`} />
+            Refresh
+          </Button>
+        </div>
       </div>
 
       {/* stats */}
