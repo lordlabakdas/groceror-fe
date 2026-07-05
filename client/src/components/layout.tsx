@@ -70,6 +70,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     <Link href="/coupons">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/coupons", location, true)}>Coupons</a>
                     </Link>
+                    <Link href="/bulk-rules">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/bulk-rules", location, true)}>Bulk Deals</a>
+                    </Link>
                     <Link href="/delivery-zone">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/delivery-zone", location, true)}>Delivery Zone</a>
                     </Link>
@@ -141,6 +144,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/inventory"><a className={navCls("/inventory", location)}>Myventory</a></Link>
                 <Link href="/store-orders"><a className={navCls("/store-orders", location)}>Orders</a></Link>
                 <Link href="/coupons"><a className={navCls("/coupons", location)}>Coupons</a></Link>
+                <Link href="/bulk-rules"><a className={navCls("/bulk-rules", location)}>Deals</a></Link>
                 <Link href="/delivery-zone"><a className={navCls("/delivery-zone", location)}>Zone</a></Link>
                 <Link href="/disputes"><a className={navCls("/disputes", location)}>Disputes</a></Link>
               </nav>

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useLocation } from "wouter";
-import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star } from "lucide-react";
+import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -26,6 +26,51 @@ interface CouponResult {
 interface LoyaltyBalance {
   points_balance: number;
   dollar_value: number;
+}
+
+interface BulkRuleAPI {
+  id: string;
+  name: string;
+  rule_type: string;
+  bxgf_inventory_id: string | null;
+  buy_quantity: number | null;
+  free_quantity: number | null;
+  discount_type: string | null;
+  discount_value: number | null;
+  bundle_items: { inventory_id: string; name: string }[];
+}
+
+function computeBulkDiscount(items: CartItem[], rules: BulkRuleAPI[]): { discount: number; applied: string[] } {
+  const qtyMap: Record<string, number> = {};
+  const priceMap: Record<string, number> = {};
+  for (const item of items) { qtyMap[item.id] = item.quantity; priceMap[item.id] = item.price; }
+
+  let discount = 0;
+  const applied: string[] = [];
+
+  for (const rule of rules) {
+    if (rule.rule_type === "bxgf" && rule.bxgf_inventory_id && rule.buy_quantity && rule.free_quantity) {
+      const qty = qtyMap[rule.bxgf_inventory_id] ?? 0;
+      const freeUnits = Math.floor(qty / (rule.buy_quantity + rule.free_quantity)) * rule.free_quantity;
+      if (freeUnits > 0) {
+        const d = freeUnits * (priceMap[rule.bxgf_inventory_id] ?? 0);
+        discount += d;
+        applied.push(`${rule.name} (−$${d.toFixed(2)})`);
+      }
+    } else if (rule.rule_type === "bundle" && rule.discount_value) {
+      const bundleIds = rule.bundle_items.map((b) => b.inventory_id);
+      if (bundleIds.length >= 2 && bundleIds.every((id) => id in qtyMap)) {
+        const bundleSubtotal = bundleIds.reduce((sum, id) => sum + (qtyMap[id] ?? 0) * (priceMap[id] ?? 0), 0);
+        const d = rule.discount_type === "percent"
+          ? Math.round(bundleSubtotal * rule.discount_value / 100 * 100) / 100
+          : Math.min(rule.discount_value, bundleSubtotal);
+        discount += d;
+        applied.push(`${rule.name} (−$${d.toFixed(2)})`);
+      }
+    }
+  }
+
+  return { discount: Math.round(discount * 100) / 100, applied };
 }
 
 interface ConfirmationData {
@@ -331,6 +376,10 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   const [loyaltyBalance, setLoyaltyBalance] = useState<LoyaltyBalance | null>(null);
   const [pointsToRedeem, setPointsToRedeem] = useState(0);
 
+  // Bulk rules
+  const [bulkRules, setBulkRules] = useState<BulkRuleAPI[]>([]);
+  const storeId = items[0]?.storeId;
+
   useEffect(() => {
     apiRequest("GET", "/loyalty/balance")
       .then((r) => r.json())
@@ -338,9 +387,18 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       .catch(() => {});
   }, []);
 
+  useEffect(() => {
+    if (!storeId) return;
+    apiRequest("GET", `/bulk-rules/store/${storeId}`)
+      .then((r) => r.json())
+      .then((d: BulkRuleAPI[]) => setBulkRules(d))
+      .catch(() => {});
+  }, [storeId]);
+
+  const { discount: bulkDiscount, applied: bulkApplied } = computeBulkDiscount(items, bulkRules);
   const couponDiscount = couponResult?.valid ? couponResult.discount_amount : 0;
-  const loyaltyDiscount = Math.min(pointsToRedeem / 100, total);
-  const finalTotal = Math.max(0, total - couponDiscount - loyaltyDiscount);
+  const loyaltyDiscount = Math.min(pointsToRedeem / 100, Math.max(0, total - bulkDiscount));
+  const finalTotal = Math.max(0, total - bulkDiscount - couponDiscount - loyaltyDiscount);
 
   const errors = validateCard(form);
   const hasErrors = Object.keys(errors).length > 0;
@@ -486,13 +544,31 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </div>
         )}
 
+        {/* Bulk deals applied */}
+        {bulkApplied.length > 0 && (
+          <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-3 py-2.5 space-y-1">
+            <p className="text-xs font-medium text-emerald-400 flex items-center gap-1.5">
+              <Package className="h-3 w-3" /> Deals applied
+            </p>
+            {bulkApplied.map((label, i) => (
+              <p key={i} className="text-xs text-emerald-400/80">{label}</p>
+            ))}
+          </div>
+        )}
+
         {/* Order total breakdown */}
-        {(couponDiscount > 0 || loyaltyDiscount > 0) && (
+        {(bulkDiscount > 0 || couponDiscount > 0 || loyaltyDiscount > 0) && (
           <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
               <span>${total.toFixed(2)}</span>
             </div>
+            {bulkDiscount > 0 && (
+              <div className="flex justify-between text-emerald-400">
+                <span>Bulk deals</span>
+                <span>−${bulkDiscount.toFixed(2)}</span>
+              </div>
+            )}
             {couponDiscount > 0 && (
               <div className="flex justify-between text-emerald-400">
                 <span>Coupon ({couponInput})</span>

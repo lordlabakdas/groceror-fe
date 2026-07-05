@@ -20,6 +20,7 @@ import CouponsPage from "@/pages/coupons";
 import DeliveryZonePage from "@/pages/delivery-zone";
 import LoyaltyPage from "@/pages/loyalty";
 import AlertsPage from "@/pages/alerts";
+import BulkRulesPage from "@/pages/bulk-rules";
 import DisputesPage from "@/pages/disputes";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/loyalty">{() => <BuyerRoute component={LoyaltyPage} />}</Route>
       <Route path="/alerts">{() => <BuyerRoute component={AlertsPage} />}</Route>
       <Route path="/disputes">{() => <ProtectedRoute component={DisputesPage} />}</Route>
+      <Route path="/bulk-rules">{() => <StoreOwnerRoute component={BulkRulesPage} />}</Route>
       <Route path="/coupons">{() => <StoreOwnerRoute component={CouponsPage} />}</Route>
       <Route path="/delivery-zone">{() => <StoreOwnerRoute component={DeliveryZonePage} />}</Route>
       <Route component={NotFound} />
