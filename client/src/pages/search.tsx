@@ -1,11 +1,11 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Search, Store, ShoppingCart } from "lucide-react";
+import { Search, Store, Minus, Plus } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { useAddToCart } from "@/lib/cart";
+import { useAddToCart, useCart } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
 
 interface SearchResultItem {
@@ -28,6 +28,7 @@ export default function SearchPage() {
   const [input, setInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
   const addToCart = useAddToCart();
+  const { state, dispatch } = useCart();
 
   useEffect(() => {
     const t = setTimeout(() => setDebouncedQuery(input.trim()), 300);
@@ -46,6 +47,21 @@ export default function SearchPage() {
 
   const results = data?.results ?? [];
   const busy = isLoading || isFetching;
+  const cartItemMap = new Map(state.items.map((i) => [i.id, i.quantity]));
+
+  function handleIncrement(item: SearchResultItem) {
+    const current = cartItemMap.get(item.id) ?? 0;
+    dispatch({ type: "UPDATE_QUANTITY", payload: { id: item.id, quantity: current + 1 } });
+  }
+
+  function handleDecrement(item: SearchResultItem) {
+    const current = cartItemMap.get(item.id) ?? 0;
+    if (current <= 1) {
+      dispatch({ type: "REMOVE_ITEM", payload: item.id });
+    } else {
+      dispatch({ type: "UPDATE_QUANTITY", payload: { id: item.id, quantity: current - 1 } });
+    }
+  }
 
   return (
     <div className="max-w-3xl mx-auto space-y-6">
@@ -85,55 +101,78 @@ export default function SearchPage() {
             {results.length} result{results.length !== 1 ? "s" : ""} for &ldquo;{data?.query}&rdquo;
           </p>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {results.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-xl border bg-card shadow-sm p-4 flex flex-col gap-3"
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm truncate">{item.name}</p>
-                    <Link href={`/stores/${item.store_id}`}>
-                      <a className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-0.5 transition-colors">
-                        <Store className="h-3 w-3" />
-                        {item.store_name}
-                      </a>
-                    </Link>
+            {results.map((item) => {
+              const cartQty = cartItemMap.get(item.id) ?? 0;
+              const outOfStock = item.quantity === 0;
+              return (
+                <div
+                  key={item.id}
+                  className="rounded-xl border bg-card shadow-sm p-4 flex flex-col gap-3"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="font-semibold text-sm truncate">{item.name}</p>
+                      <Link href={`/stores/${item.store_id}`}>
+                        <a className="text-xs text-muted-foreground hover:text-primary flex items-center gap-1 mt-0.5 transition-colors">
+                          <Store className="h-3 w-3" />
+                          {item.store_name}
+                        </a>
+                      </Link>
+                    </div>
+                    <span className="font-bold text-sm flex-shrink-0">${item.price.toFixed(2)}</span>
                   </div>
-                  <span className="font-bold text-sm flex-shrink-0">${item.price.toFixed(2)}</span>
+                  <div className="flex items-center justify-between">
+                    <Badge variant="secondary" className="text-xs capitalize">
+                      {item.category.toLowerCase()}
+                    </Badge>
+                    {cartQty > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="outline"
+                          className="h-7 w-7"
+                          onClick={() => handleDecrement(item)}
+                        >
+                          <Minus className="h-3 w-3" />
+                        </Button>
+                        <span className="w-4 text-center text-sm font-semibold">{cartQty}</span>
+                        <Button
+                          size="icon"
+                          variant="default"
+                          className="h-7 w-7"
+                          onClick={() => handleIncrement(item)}
+                          disabled={outOfStock}
+                        >
+                          <Plus className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ) : (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="h-7 text-xs"
+                        disabled={outOfStock}
+                        onClick={() =>
+                          addToCart({
+                            id: item.id,
+                            name: item.name,
+                            price: item.price.toFixed(2),
+                            category: item.category,
+                            description: item.notes ?? "",
+                            imageUrl: getProductImage(item.name, item.category),
+                            stock: item.quantity,
+                            storeId: item.store_id,
+                            storeName: item.store_name,
+                          })
+                        }
+                      >
+                        Add
+                      </Button>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center justify-between">
-                  <Badge variant="secondary" className="text-xs capitalize">
-                    {item.category.toLowerCase()}
-                  </Badge>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="h-7 text-xs gap-1"
-                    disabled={item.quantity === 0}
-                    onClick={() =>
-                      addToCart(
-                        {
-                          id: item.id,
-                          name: item.name,
-                          price: item.price.toFixed(2),
-                          category: item.category,
-                          description: item.notes ?? "",
-                          imageUrl: getProductImage(item.name, item.category),
-                          stock: item.quantity,
-                          storeId: item.store_id,
-                          storeName: item.store_name,
-                        },
-                        1,
-                      )
-                    }
-                  >
-                    <ShoppingCart className="h-3 w-3" />
-                    Add
-                  </Button>
-                </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
