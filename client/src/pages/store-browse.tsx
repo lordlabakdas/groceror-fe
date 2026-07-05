@@ -90,11 +90,11 @@ export default function StoreBrowse() {
       </Link>
 
       {/* ── Store banner ──────────────────────────────────── */}
-      <div className="rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4 border-l-4 border-l-emerald-500/60">
+      <div className="rounded-2xl border border-border bg-card p-5 flex flex-col sm:flex-row sm:items-center gap-4 border-l-4 border-l-amber-500/60">
         {/* Avatar */}
         <div
           className="w-14 h-14 rounded-full flex-shrink-0 flex items-center justify-center text-white font-bold text-xl"
-          style={{ background: "linear-gradient(135deg, #22c55e 0%, #14b8a6 100%)" }}
+          style={{ background: "linear-gradient(135deg, #d97706 0%, #f59e0b 100%)" }}
         >
           {storeName.charAt(0).toUpperCase()}
         </div>
@@ -133,7 +133,7 @@ export default function StoreBrowse() {
               className={cn(
                 "text-xs",
                 store.is_active
-                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20"
+                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
                   : "bg-muted text-muted-foreground border-border hover:bg-muted"
               )}
             >
@@ -251,7 +251,7 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
           alt={product.name}
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
         />
-        <Badge className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+        <Badge className="absolute top-2 left-2 text-xs font-medium backdrop-blur-sm bg-amber-500/20 text-amber-400 border border-amber-500/30">
           {product.category}
         </Badge>
         {outOfStock && (
@@ -318,7 +318,7 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
             alt={product.name}
             className="w-full h-full object-cover"
           />
-          <Badge className="absolute top-3 left-3 text-xs font-medium backdrop-blur-sm bg-emerald-500/20 text-emerald-400 border border-emerald-500/30">
+          <Badge className="absolute top-3 left-3 text-xs font-medium backdrop-blur-sm bg-amber-500/20 text-amber-400 border border-amber-500/30">
             {product.category}
           </Badge>
         </div>
