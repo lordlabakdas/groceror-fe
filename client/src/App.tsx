@@ -16,6 +16,11 @@ import StoreBrowse from "@/pages/store-browse";
 import Orders from "@/pages/orders";
 import StoreOrders from "@/pages/store-orders";
 import SearchPage from "@/pages/search";
+import CouponsPage from "@/pages/coupons";
+import DeliveryZonePage from "@/pages/delivery-zone";
+import LoyaltyPage from "@/pages/loyalty";
+import AlertsPage from "@/pages/alerts";
+import DisputesPage from "@/pages/disputes";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
@@ -48,7 +53,12 @@ function Router() {
       <Route path="/stores/:id">{() => <BuyerRoute component={StoreBrowse} />}</Route>
       <Route path="/search">{() => <BuyerRoute component={SearchPage} />}</Route>
       <Route path="/orders">{() => <BuyerRoute component={Orders} />}</Route>
-<Route component={NotFound} />
+      <Route path="/loyalty">{() => <BuyerRoute component={LoyaltyPage} />}</Route>
+      <Route path="/alerts">{() => <BuyerRoute component={AlertsPage} />}</Route>
+      <Route path="/disputes">{() => <ProtectedRoute component={DisputesPage} />}</Route>
+      <Route path="/coupons">{() => <StoreOwnerRoute component={CouponsPage} />}</Route>
+      <Route path="/delivery-zone">{() => <StoreOwnerRoute component={DeliveryZonePage} />}</Route>
+      <Route component={NotFound} />
     </Switch>
   );
 }

@@ -1,12 +1,103 @@
-import { useQuery } from "@tanstack/react-query";
-import { Check, CheckCircle2, Clock, Package, RotateCcw, ShoppingBag, Truck, XCircle } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { AlertTriangle, Check, CheckCircle2, Clock, Package, RotateCcw, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { useCart } from "@/lib/cart";
 import { useToast } from "@/hooks/use-toast";
 import { getProductImage } from "@/lib/catalog";
+import { apiRequest } from "@/lib/queryClient";
+
+const DISPUTE_REASONS = [
+  { value: "wrong_item", label: "Wrong item received" },
+  { value: "missing_item", label: "Item missing" },
+  { value: "quality", label: "Poor quality" },
+  { value: "damaged", label: "Item arrived damaged" },
+  { value: "not_delivered", label: "Not delivered" },
+  { value: "other", label: "Other" },
+];
+
+function ReportIssueDialog({ orderId }: { orderId: string }) {
+  const [open, setOpen] = useState(false);
+  const [reason, setReason] = useState("");
+  const [description, setDescription] = useState("");
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", "/disputes", { order_id: orderId, reason, description }),
+    onSuccess: () => {
+      setOpen(false);
+      setReason(""); setDescription("");
+      queryClient.invalidateQueries({ queryKey: ["/disputes"] });
+      toast({ title: "Issue reported", description: "The store will review your dispute." });
+    },
+    onError: (err: any) => {
+      toast({ title: "Error", description: err?.message ?? "Could not submit dispute", variant: "destructive" });
+    },
+  });
+
+  return (
+    <Dialog open={open} onOpenChange={setOpen}>
+      <DialogTrigger asChild>
+        <Button size="sm" variant="ghost" className="h-6 text-xs px-2 gap-1 text-muted-foreground hover:text-destructive">
+          <AlertTriangle className="h-3 w-3" />
+          Report issue
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Report an issue</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
+          <div className="space-y-1.5">
+            <Label>Reason</Label>
+            <Select value={reason} onValueChange={setReason}>
+              <SelectTrigger><SelectValue placeholder="Select a reason" /></SelectTrigger>
+              <SelectContent>
+                {DISPUTE_REASONS.map((r) => <SelectItem key={r.value} value={r.value}>{r.label}</SelectItem>)}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="space-y-1.5">
+            <Label>Description</Label>
+            <Textarea
+              placeholder="Describe what went wrong…"
+              rows={3}
+              value={description}
+              onChange={(e) => setDescription(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={!reason || !description || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? "Submitting…" : "Submit"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
 interface OrderLineItem {
   inventory_id: string;
@@ -185,40 +276,43 @@ function OrderRow({ order }: { order: OrderItem }) {
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Items
             </p>
-            {/* Reorder button / confirm */}
-            {order.store_id && (
-              confirmReplace ? (
-                <div className="flex items-center gap-2">
-                  <span className="text-xs text-muted-foreground">Replace current cart?</span>
+            <div className="flex items-center gap-2">
+              <ReportIssueDialog orderId={order.id} />
+              {/* Reorder button / confirm */}
+              {order.store_id && (
+                confirmReplace ? (
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">Replace current cart?</span>
+                    <Button
+                      size="sm"
+                      variant="destructive"
+                      className="h-6 text-xs px-2"
+                      onClick={(e) => { e.stopPropagation(); doReorder(); }}
+                    >
+                      Yes, replace
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-6 text-xs px-2"
+                      onClick={(e) => { e.stopPropagation(); setConfirmReplace(false); }}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
                   <Button
                     size="sm"
-                    variant="destructive"
-                    className="h-6 text-xs px-2"
-                    onClick={(e) => { e.stopPropagation(); doReorder(); }}
+                    variant="outline"
+                    className="h-6 text-xs px-2 gap-1"
+                    onClick={handleReorder}
                   >
-                    Yes, replace
+                    <RotateCcw className="h-3 w-3" />
+                    Reorder
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    className="h-6 text-xs px-2"
-                    onClick={(e) => { e.stopPropagation(); setConfirmReplace(false); }}
-                  >
-                    Cancel
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  size="sm"
-                  variant="outline"
-                  className="h-6 text-xs px-2 gap-1"
-                  onClick={handleReorder}
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  Reorder
-                </Button>
-              )
-            )}
+                )
+              )}
+            </div>
           </div>
           {order.items.map((item) => (
             <div key={item.inventory_id} className="flex justify-between text-sm">

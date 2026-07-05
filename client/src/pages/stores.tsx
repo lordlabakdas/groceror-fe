@@ -6,8 +6,45 @@ import L from "leaflet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Globe, Map, List, Star } from "lucide-react";
+import { Search, MapPin, Globe, Map, List, Star, Navigation, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiRequest } from "@/lib/queryClient";
+
+interface FeaturedStore {
+  store_id: string;
+  store_name: string;
+  tagline: string | null;
+  priority: number;
+  is_active: boolean;
+}
+
+function FeaturedSection({ featuredIds }: { featuredIds: Set<string> }) {
+  const { data: featured = [] } = useQuery<FeaturedStore[]>({
+    queryKey: ["/stores/featured"],
+  });
+  if (featured.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5 text-xs font-semibold text-amber-500 uppercase tracking-wide">
+        <Sparkles className="h-3.5 w-3.5" />
+        Featured
+      </div>
+      <div className="flex gap-2 overflow-x-auto pb-1">
+        {featured.map((f) => (
+          <Link key={f.store_id} href={`/stores/${f.store_id}`}>
+            <a className={cn(
+              "flex-shrink-0 rounded-lg border px-3 py-2 hover:border-amber-500/60 hover:bg-amber-500/5 transition-colors cursor-pointer min-w-[140px]",
+              featuredIds.has(f.store_id) ? "border-amber-500/50 bg-amber-500/5" : "border-border bg-card"
+            )}>
+              <p className="font-semibold text-xs truncate">{f.store_name}</p>
+              {f.tagline && <p className="text-[10px] text-muted-foreground truncate mt-0.5">{f.tagline}</p>}
+            </a>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
 
 // Fix default Leaflet marker icons broken by Vite's asset pipeline.
 delete (L.Icon.Default.prototype as any)._getIconUrl;
@@ -62,18 +99,44 @@ export default function Stores() {
   const [search, setSearch] = useState("");
   const [view, setView] = useState<ViewMode>("map");
   const [hoveredStoreId, setHoveredStoreId] = useState<string | null>(null);
+  const [nearbyIds, setNearbyIds] = useState<Set<string> | null>(null);
+  const [locating, setLocating] = useState(false);
   const cardRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
   const { data: stores = [], isLoading } = useQuery<StoreItem[]>({
     queryKey: ["/stores/"],
   });
 
+  const { data: featured = [] } = useQuery<FeaturedStore[]>({
+    queryKey: ["/stores/featured"],
+  });
+  const featuredIds = new Set(featured.map((f) => f.store_id));
+
+  function filterNearMe() {
+    if (nearbyIds !== null) { setNearbyIds(null); return; }
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
+        try {
+          const res = await apiRequest("GET", `/delivery-zones/nearby?lat=${pos.coords.latitude}&lng=${pos.coords.longitude}`);
+          const data: { store_id: string }[] = await res.json();
+          setNearbyIds(new Set(data.map((d) => d.store_id)));
+        } catch {
+          setNearbyIds(new Set());
+        } finally {
+          setLocating(false);
+        }
+      },
+      () => setLocating(false)
+    );
+  }
+
   const filtered = stores.filter((s) => {
     const q = search.toLowerCase();
-    return (
-      s.name.toLowerCase().includes(q) ||
-      (s.location ?? "").toLowerCase().includes(q)
-    );
+    const matchesSearch = s.name.toLowerCase().includes(q) || (s.location ?? "").toLowerCase().includes(q);
+    const matchesNearby = nearbyIds === null || nearbyIds.has(s.id);
+    return matchesSearch && matchesNearby;
   });
 
   const mappable = filtered.filter((s) => s.latitude != null && s.longitude != null);
@@ -119,6 +182,19 @@ export default function Stores() {
     </div>
   );
 
+  const nearMeButton = (
+    <Button
+      variant={nearbyIds !== null ? "default" : "outline"}
+      size="sm"
+      className="gap-1.5 shrink-0"
+      onClick={filterNearMe}
+      disabled={locating}
+    >
+      <Navigation className="h-3.5 w-3.5" />
+      {locating ? "…" : nearbyIds !== null ? "Near me ✓" : "Near me"}
+    </Button>
+  );
+
   return (
     <div>
       {/* ── Desktop split-pane (md+) ─────────────────────────── */}
@@ -140,6 +216,7 @@ export default function Stores() {
           {/* Search header */}
           <div className="p-3 border-b border-border flex-shrink-0 flex items-center gap-2 bg-background">
             {searchBar}
+            {nearMeButton}
             <span className="text-xs text-muted-foreground flex-shrink-0">
               {filtered.length} store{filtered.length !== 1 ? "s" : ""}
             </span>
@@ -147,6 +224,11 @@ export default function Stores() {
 
           {/* Card list */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            {featured.length > 0 && (
+              <div className="pb-2">
+                <FeaturedSection featuredIds={featuredIds} />
+              </div>
+            )}
             {isLoading ? (
               <div className="space-y-2">
                 {Array.from({ length: 4 }).map((_, i) => (
@@ -187,6 +269,7 @@ export default function Stores() {
           </div>
           <div className="flex items-center gap-2">
             {searchBar}
+            {nearMeButton}
             <div className="flex rounded-md border overflow-hidden flex-shrink-0">
               <Button
                 variant={view === "map" ? "default" : "ghost"}
@@ -209,6 +292,8 @@ export default function Stores() {
             </div>
           </div>
         </div>
+
+        {featured.length > 0 && <FeaturedSection featuredIds={featuredIds} />}
 
         {isLoading ? (
           <div className="h-[520px] rounded-xl border bg-muted animate-pulse" />

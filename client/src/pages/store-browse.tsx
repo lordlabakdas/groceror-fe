@@ -310,9 +310,6 @@ export default function StoreBrowse() {
         </div>
       </div>
 
-      {/* ── Ratings ───────────────────────────────────────── */}
-      <RatingsSection storeId={storeId} />
-
       {/* ── Search + cart ─────────────────────────────────── */}
       <div className="flex items-center gap-3">
         <div className="relative flex-1">
@@ -392,6 +389,9 @@ export default function StoreBrowse() {
         onIncrement={() => selectedProduct && handleIncrement(selectedProduct)}
         onDecrement={() => selectedProduct && handleDecrement(selectedProduct)}
       />
+
+      {/* ── Ratings ───────────────────────────────────────── */}
+      <RatingsSection storeId={storeId} />
     </div>
   );
 }
