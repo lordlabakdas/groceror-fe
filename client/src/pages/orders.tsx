@@ -1,8 +1,12 @@
 import { useQuery } from "@tanstack/react-query";
-import { Check, CheckCircle2, Clock, Package, ShoppingBag, Truck, XCircle } from "lucide-react";
+import { Check, CheckCircle2, Clock, Package, RotateCcw, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
+import { useCart } from "@/lib/cart";
+import { useToast } from "@/hooks/use-toast";
+import { getProductImage } from "@/lib/catalog";
 
 interface OrderLineItem {
   inventory_id: string;
@@ -17,6 +21,8 @@ interface OrderItem {
   status: string;
   items: OrderLineItem[];
   order_date: string;
+  store_id?: string | null;
+  store_name?: string | null;
 }
 
 interface OrderHistoryResponse {
@@ -61,7 +67,6 @@ function OrderTimeline({ status }: { status: string }) {
         const Icon = done ? Check : step.icon;
         return (
           <div key={step.key} className={cn("flex items-center", i > 0 && "flex-1")}>
-            {/* connector */}
             {i > 0 && (
               <div
                 className={cn(
@@ -99,6 +104,10 @@ function OrderTimeline({ status }: { status: string }) {
 
 function OrderRow({ order }: { order: OrderItem }) {
   const [open, setOpen] = useState(false);
+  const [confirmReplace, setConfirmReplace] = useState(false);
+  const { state, dispatch, openCart } = useCart();
+  const { toast } = useToast();
+
   const totalQty = order.items.reduce((acc, i) => acc + i.quantity, 0);
   const date = new Date(order.order_date).toLocaleDateString(undefined, {
     month: "short",
@@ -106,11 +115,46 @@ function OrderRow({ order }: { order: OrderItem }) {
     year: "numeric",
   });
 
+  function doReorder() {
+    dispatch({ type: "CLEAR_CART" });
+    for (const item of order.items) {
+      dispatch({
+        type: "ADD_ITEM",
+        payload: {
+          id: item.inventory_id,
+          quantity: item.quantity,
+          name: item.name,
+          price: item.price,
+          storeId: order.store_id ?? "",
+          storeName: order.store_name ?? "",
+          imageUrl: getProductImage(item.name, "OTHER"),
+          stock: 999,
+        },
+      });
+    }
+    setConfirmReplace(false);
+    openCart();
+    toast({
+      title: "Cart ready",
+      description: `${order.items.length} item${order.items.length !== 1 ? "s" : ""} added from your past order.`,
+    });
+  }
+
+  function handleReorder(e: React.MouseEvent) {
+    e.stopPropagation();
+    const existingStoreId = state.items[0]?.storeId;
+    if (existingStoreId && existingStoreId !== order.store_id) {
+      setConfirmReplace(true);
+    } else {
+      doReorder();
+    }
+  }
+
   return (
     <div className="rounded-xl border bg-card shadow-sm overflow-hidden">
       <button
         className="w-full text-left p-5 flex items-center gap-4 hover:bg-muted/40 transition-colors"
-        onClick={() => setOpen((v) => !v)}
+        onClick={() => { setOpen((v) => !v); setConfirmReplace(false); }}
       >
         <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
           <ShoppingBag className="h-5 w-5 text-primary" />
@@ -119,6 +163,9 @@ function OrderRow({ order }: { order: OrderItem }) {
           <p className="font-medium text-sm truncate">{date}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
             {totalQty} item{totalQty !== 1 ? "s" : ""}
+            {order.store_name && (
+              <span className="ml-1.5 text-muted-foreground/70">· {order.store_name}</span>
+            )}
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
@@ -128,14 +175,51 @@ function OrderRow({ order }: { order: OrderItem }) {
           </Badge>
         </div>
       </button>
+
       {open && (
         <div className="border-t px-5 py-4 bg-muted/20 space-y-1">
           <div className="pb-4 pt-1">
             <OrderTimeline status={order.status} />
           </div>
-          <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
-            Items
-          </p>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
+              Items
+            </p>
+            {/* Reorder button / confirm */}
+            {order.store_id && (
+              confirmReplace ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-muted-foreground">Replace current cart?</span>
+                  <Button
+                    size="sm"
+                    variant="destructive"
+                    className="h-6 text-xs px-2"
+                    onClick={(e) => { e.stopPropagation(); doReorder(); }}
+                  >
+                    Yes, replace
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-6 text-xs px-2"
+                    onClick={(e) => { e.stopPropagation(); setConfirmReplace(false); }}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              ) : (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="h-6 text-xs px-2 gap-1"
+                  onClick={handleReorder}
+                >
+                  <RotateCcw className="h-3 w-3" />
+                  Reorder
+                </Button>
+              )
+            )}
+          </div>
           {order.items.map((item) => (
             <div key={item.inventory_id} className="flex justify-between text-sm">
               <span>
