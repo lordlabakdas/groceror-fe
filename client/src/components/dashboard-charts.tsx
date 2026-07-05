@@ -1,5 +1,17 @@
-import { Bar, BarChart, CartesianGrid, Cell, Pie, PieChart, XAxis, YAxis } from "recharts";
-import { BarChart3, PieChart as PieChartIcon } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
+import {
+  Area,
+  AreaChart,
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Cell,
+  Pie,
+  PieChart,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { BarChart3, LineChart, PieChart as PieChartIcon } from "lucide-react";
 import {
   ChartContainer,
   ChartTooltip,
@@ -19,6 +31,107 @@ interface TodaysOrder {
   total_price: number;
   status: string;
   order_date: string;
+}
+
+interface RevenueTrendPoint {
+  date: string; // "YYYY-MM-DD"
+  revenue: number;
+  order_count: number;
+}
+
+interface RevenueTrendResponse {
+  trend: RevenueTrendPoint[];
+}
+
+// ---------------------------------------------------------------------------
+// 30-day revenue trend — area chart
+// ---------------------------------------------------------------------------
+
+const revenueTrendConfig = {
+  revenue: {
+    label: "Revenue",
+    color: "hsl(var(--chart-1))",
+  },
+} satisfies ChartConfig;
+
+export function RevenueTrendChart() {
+  const { data, isLoading } = useQuery<RevenueTrendResponse>({
+    queryKey: ["/dashboard/revenue-trend?days=30"],
+    refetchInterval: 300_000,
+  });
+
+  if (isLoading || !data) return null;
+
+  const points = data.trend.map((p) => {
+    const [, m, d] = p.date.split("-").map(Number);
+    return { ...p, label: `${m}/${d}` };
+  });
+  const total = points.reduce((s, p) => s + p.revenue, 0);
+  const totalOrders = points.reduce((s, p) => s + p.order_count, 0);
+
+  return (
+    <div className="rounded-2xl border bg-card shadow-sm overflow-hidden">
+      <div className="px-4 py-3 border-b flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <LineChart className="h-4 w-4 text-primary" />
+          <h2 className="font-semibold text-sm">Revenue — Last 30 Days</h2>
+        </div>
+        <span className="text-sm text-muted-foreground">
+          <span className="font-semibold text-foreground">${total.toFixed(2)}</span>
+          {" · "}
+          {totalOrders} order{totalOrders !== 1 ? "s" : ""}
+        </span>
+      </div>
+      <div className="p-4">
+        {total === 0 ? (
+          <p className="text-sm text-muted-foreground text-center py-10">
+            No revenue recorded in the last 30 days.
+          </p>
+        ) : (
+          <ChartContainer config={revenueTrendConfig} className="h-56 w-full">
+            <AreaChart data={points} margin={{ left: 8, right: 8 }}>
+              <defs>
+                <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor="var(--color-revenue)" stopOpacity={0.35} />
+                  <stop offset="95%" stopColor="var(--color-revenue)" stopOpacity={0.02} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid vertical={false} strokeOpacity={0.15} />
+              <XAxis
+                dataKey="label"
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                interval="preserveStartEnd"
+                minTickGap={24}
+              />
+              <YAxis
+                fontSize={11}
+                tickLine={false}
+                axisLine={false}
+                width={48}
+                tickFormatter={(v) => `$${v}`}
+              />
+              <ChartTooltip
+                content={
+                  <ChartTooltipContent
+                    formatter={(value) => [`$${Number(value).toFixed(2)}`, " revenue"]}
+                  />
+                }
+              />
+              <Area
+                type="monotone"
+                dataKey="revenue"
+                stroke="var(--color-revenue)"
+                strokeWidth={2}
+                fill="url(#revenueFill)"
+              />
+            </AreaChart>
+          </ChartContainer>
+        )}
+      </div>
+    </div>
+  );
 }
 
 // ---------------------------------------------------------------------------

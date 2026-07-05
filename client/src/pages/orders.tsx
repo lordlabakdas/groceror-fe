@@ -1,7 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
-import { ShoppingBag } from "lucide-react";
+import { Check, CheckCircle2, Clock, Package, ShoppingBag, Truck, XCircle } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "@/components/ui/badge";
+import { cn } from "@/lib/utils";
 
 interface OrderLineItem {
   inventory_id: string;
@@ -26,6 +27,74 @@ function statusVariant(status: string): "default" | "secondary" | "destructive" 
   if (status === "completed") return "default";
   if (status === "cancelled") return "destructive";
   return "secondary";
+}
+
+// ---------------------------------------------------------------------------
+// Status timeline — pending → confirmed → ready → delivered
+// ---------------------------------------------------------------------------
+
+const TIMELINE_STEPS = [
+  { key: "pending", label: "Placed", icon: Clock },
+  { key: "confirmed", label: "Confirmed", icon: CheckCircle2 },
+  { key: "ready", label: "Ready", icon: Package },
+  { key: "delivered", label: "Delivered", icon: Truck },
+] as const;
+
+function OrderTimeline({ status }: { status: string }) {
+  if (status === "cancelled") {
+    return (
+      <div className="flex items-center gap-2 rounded-lg bg-destructive/10 text-destructive px-3 py-2 text-sm">
+        <XCircle className="h-4 w-4 flex-shrink-0" />
+        This order was cancelled.
+      </div>
+    );
+  }
+
+  const currentIdx = TIMELINE_STEPS.findIndex((s) => s.key === status);
+  if (currentIdx === -1) return null;
+
+  return (
+    <div className="flex items-center" aria-label={`Order status: ${status}`}>
+      {TIMELINE_STEPS.map((step, i) => {
+        const done = i < currentIdx;
+        const current = i === currentIdx;
+        const Icon = done ? Check : step.icon;
+        return (
+          <div key={step.key} className={cn("flex items-center", i > 0 && "flex-1")}>
+            {/* connector */}
+            {i > 0 && (
+              <div
+                className={cn(
+                  "h-0.5 flex-1 mx-1 rounded-full",
+                  i <= currentIdx ? "bg-primary" : "bg-border",
+                )}
+              />
+            )}
+            <div className="flex flex-col items-center gap-1">
+              <div
+                className={cn(
+                  "w-8 h-8 rounded-full flex items-center justify-center border-2 transition-colors",
+                  done && "bg-primary border-primary text-primary-foreground",
+                  current && "border-primary text-primary bg-primary/10",
+                  !done && !current && "border-border text-muted-foreground",
+                )}
+              >
+                <Icon className="h-4 w-4" />
+              </div>
+              <span
+                className={cn(
+                  "text-[11px] font-medium whitespace-nowrap",
+                  current ? "text-primary" : done ? "text-foreground" : "text-muted-foreground",
+                )}
+              >
+                {step.label}
+              </span>
+            </div>
+          </div>
+        );
+      })}
+    </div>
+  );
 }
 
 function OrderRow({ order }: { order: OrderItem }) {
@@ -61,6 +130,9 @@ function OrderRow({ order }: { order: OrderItem }) {
       </button>
       {open && (
         <div className="border-t px-5 py-4 bg-muted/20 space-y-1">
+          <div className="pb-4 pt-1">
+            <OrderTimeline status={order.status} />
+          </div>
           <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide mb-2">
             Items
           </p>

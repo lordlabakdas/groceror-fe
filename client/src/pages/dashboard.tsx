@@ -7,11 +7,16 @@ import {
   Calendar,
   TrendingUp,
   Package,
+  PackagePlus,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { TopSellersChart, OrdersByStatusChart } from "@/components/dashboard-charts";
+import {
+  TopSellersChart,
+  OrdersByStatusChart,
+  RevenueTrendChart,
+} from "@/components/dashboard-charts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -174,6 +179,13 @@ export default function Dashboard() {
     ? new Date(dataUpdatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })
     : "—";
 
+  // Restock suggestions: low-stock items ranked by how fast they sell.
+  // Items that are both low and top sellers are the most urgent reorders.
+  const unitsSoldById = new Map(data.top_sellers.map((t) => [t.id, t.units_sold]));
+  const restockSuggestions = [...data.low_stock]
+    .map((item) => ({ ...item, units_sold: unitsSoldById.get(item.id) ?? 0 }))
+    .sort((a, b) => b.units_sold - a.units_sold || a.quantity - b.quantity);
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -195,6 +207,9 @@ export default function Dashboard() {
         />
         <KpiCard label="Expiring Soon" value={data.expiring_soon.length} color="amber" />
       </div>
+
+      {/* Revenue trend */}
+      <RevenueTrendChart />
 
       {/* Charts row */}
       {(data.top_sellers.length > 0 || data.todays_summary.orders.length > 0) && (
@@ -291,6 +306,44 @@ export default function Dashboard() {
                     {item.days_remaining}d
                   </Badge>
                 </div>
+              </div>
+            ))
+          )}
+        </Panel>
+
+        {/* Restock Suggestions */}
+        <Panel
+          title="Restock Suggestions"
+          icon={<PackagePlus className="h-4 w-4 text-primary" />}
+          borderColor="border-l-primary"
+        >
+          {restockSuggestions.length === 0 ? (
+            <EmptyState message="Nothing needs restocking right now." />
+          ) : (
+            restockSuggestions.map((item) => (
+              <div key={item.id} className="flex items-center justify-between text-sm py-1">
+                <div className="flex items-center gap-2 min-w-0">
+                  <Link href="/inventory">
+                    <a className="font-medium truncate hover:text-primary hover:underline underline-offset-2">
+                      {item.name}
+                    </a>
+                  </Link>
+                  {item.units_sold > 0 && (
+                    <Badge
+                      variant="outline"
+                      className="bg-primary/10 text-primary border-primary/25 text-xs flex-shrink-0"
+                    >
+                      ×{item.units_sold} this week
+                    </Badge>
+                  )}
+                </div>
+                <span
+                  className={`font-semibold tabular-nums flex-shrink-0 ${
+                    item.quantity === 0 ? "text-red-400" : "text-amber-400"
+                  }`}
+                >
+                  {item.quantity} left
+                </span>
               </div>
             ))
           )}
