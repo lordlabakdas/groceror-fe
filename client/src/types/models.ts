@@ -9,6 +9,7 @@ export interface GrocerorInventoryItem {
   store_id: string;    // UUID — needed as the URL segment for cart operations
   notes: string | null;
   expiry_date?: string | null; // "YYYY-MM-DD" — earliest upcoming expiry, if set
+  sale_price?: number | null;  // active promotion price, if any
 }
 
 export interface GetStoreInventoryResponse {
@@ -27,6 +28,7 @@ export interface Product {
   stock: number;
   storeId: string;     // groceror store UUID, required by cart endpoints
   storeName?: string;  // display name of the store, used for cross-store cart warning
+  salePrice?: number | null;
 }
 
 export interface CartItem {

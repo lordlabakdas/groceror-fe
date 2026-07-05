@@ -36,6 +36,7 @@ import {
   RefreshCw,
   ShoppingBag,
   Calendar,
+  Tag,
 } from "lucide-react";
 
 // ---------------------------------------------------------------------------
@@ -241,6 +242,112 @@ function EditPriceDialog({ item, onClose }: EditDialogProps) {
   );
 }
 
+function EditPromotionDialog({ item, onClose }: EditDialogProps) {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const today = new Date().toISOString().split("T")[0];
+  const [salePrice, setSalePrice] = useState(item?.sale_price ?? item?.price ?? 0);
+  const [startDate, setStartDate] = useState(today);
+  const [endDate, setEndDate] = useState("");
+
+  const setMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/inventory/${item!.id}/promotion`, {
+        sale_price: salePrice,
+        start_date: startDate,
+        end_date: endDate,
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      toast({ title: "Promotion set", description: `Sale price $${salePrice.toFixed(2)} active until ${endDate}.` });
+      onClose();
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed", description: err.message ?? "Could not set promotion.", variant: "destructive" });
+    },
+  });
+
+  const clearMutation = useMutation({
+    mutationFn: () => apiRequest("DELETE", `/inventory/${item!.id}/promotion`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
+      toast({ title: "Promotion removed" });
+      onClose();
+    },
+  });
+
+  if (!item) return null;
+
+  return (
+    <Dialog open onOpenChange={(open) => { if (!open) onClose(); }}>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Set promotion — {item.name}</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-1">
+          <p className="text-xs text-muted-foreground">
+            Regular price: <span className="font-semibold">${item.price.toFixed(2)}</span>
+          </p>
+          <div className="space-y-1">
+            <Label htmlFor="promo-price">Sale price ($)</Label>
+            <Input
+              id="promo-price"
+              type="number"
+              min={0.01}
+              step={0.01}
+              value={salePrice}
+              onChange={(e) => setSalePrice(Number(e.target.value))}
+            />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="promo-start">Start date</Label>
+              <Input
+                id="promo-start"
+                type="date"
+                min={today}
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="promo-end">End date</Label>
+              <Input
+                id="promo-end"
+                type="date"
+                min={startDate || today}
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+              />
+            </div>
+          </div>
+          <div className="flex justify-between gap-2 pt-1">
+            {item.sale_price != null && (
+              <Button
+                variant="ghost"
+                className="text-destructive hover:text-destructive"
+                onClick={() => clearMutation.mutate()}
+                disabled={clearMutation.isPending}
+              >
+                {clearMutation.isPending ? "Removing…" : "Remove sale"}
+              </Button>
+            )}
+            <div className="flex gap-2 ml-auto">
+              <Button variant="outline" onClick={onClose}>Cancel</Button>
+              <Button
+                onClick={() => setMutation.mutate()}
+                disabled={setMutation.isPending || !endDate || salePrice <= 0}
+              >
+                {setMutation.isPending ? "Saving…" : "Set sale"}
+              </Button>
+            </div>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 function EditExpiryDialog({ item, onClose }: EditDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -307,9 +414,10 @@ interface InventoryCardProps {
   onEdit: () => void;
   onSetPrice: () => void;
   onSetExpiry: () => void;
+  onSetPromotion: () => void;
 }
 
-function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: InventoryCardProps) {
+function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry, onSetPromotion }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
   const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
   const expiry = expiryStatus(item.expiry_date);
@@ -355,6 +463,13 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
             <Calendar className="h-3.5 w-3.5" />
           </button>
           <button
+            onClick={(e) => { e.stopPropagation(); onSetPromotion(); }}
+            className="bg-card/90 hover:bg-rose-900/30 text-muted-foreground hover:text-rose-400 rounded-full p-1.5 shadow-sm"
+            aria-label="Set promotion"
+          >
+            <Tag className="h-3.5 w-3.5" />
+          </button>
+          <button
             onClick={(e) => { e.stopPropagation(); onDelete(); }}
             className="bg-card/90 hover:bg-red-900/30 text-muted-foreground hover:text-red-400 rounded-full p-1.5 shadow-sm"
             aria-label="Delete item"
@@ -374,10 +489,22 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry }: Inve
         </div>
 
         <div className="flex items-center justify-between">
-          <span className="text-2xl font-bold text-primary">
-            ${item.price.toFixed(2)}
-          </span>
+          <div>
+            {item.sale_price != null ? (
+              <>
+                <span className="text-2xl font-bold text-rose-400">${item.sale_price.toFixed(2)}</span>
+                <span className="text-sm line-through text-muted-foreground ml-2">${item.price.toFixed(2)}</span>
+              </>
+            ) : (
+              <span className="text-2xl font-bold text-primary">${item.price.toFixed(2)}</span>
+            )}
+          </div>
           <div className="flex flex-col items-end gap-1">
+            {item.sale_price != null && (
+              <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-rose-900/30 text-rose-400">
+                On sale
+              </span>
+            )}
             <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${stockColor}`}>
               {stockLabel}
             </span>
@@ -426,6 +553,7 @@ export default function Inventory() {
   const [editTarget, setEditTarget] = useState<InventoryItem | null>(null);
   const [priceEditTarget, setPriceEditTarget] = useState<InventoryItem | null>(null);
   const [expiryEditTarget, setExpiryEditTarget] = useState<InventoryItem | null>(null);
+  const [promotionTarget, setPromotionTarget] = useState<InventoryItem | null>(null);
 
   const { data, isLoading, error, refetch, isFetching } = useQuery<GetStoreInventoryResponse>({
     queryKey: ["/inventory/get-store-inventory"],
@@ -579,6 +707,7 @@ export default function Inventory() {
               onEdit={() => setEditTarget(item)}
               onSetPrice={() => setPriceEditTarget(item)}
               onSetExpiry={() => setExpiryEditTarget(item)}
+              onSetPromotion={() => setPromotionTarget(item)}
             />
           ))}
         </div>
@@ -603,6 +732,13 @@ export default function Inventory() {
         key={expiryEditTarget?.id}
         item={expiryEditTarget}
         onClose={() => setExpiryEditTarget(null)}
+      />
+
+      {/* promotion dialog */}
+      <EditPromotionDialog
+        key={promotionTarget?.id}
+        item={promotionTarget}
+        onClose={() => setPromotionTarget(null)}
       />
 
       {/* delete confirm dialog */}

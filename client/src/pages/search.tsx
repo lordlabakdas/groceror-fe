@@ -17,6 +17,7 @@ interface SearchResultItem {
   notes: string | null;
   store_id: string;
   store_name: string;
+  sale_price?: number | null;
 }
 
 interface SearchResponse {
@@ -43,7 +44,8 @@ function CompareCard({
   onIncrement: (item: SearchResultItem) => void;
   onDecrement: (item: SearchResultItem) => void;
 }) {
-  const sorted = [...variants].sort((a, b) => a.price - b.price);
+  const effectivePrice = (item: SearchResultItem) => item.sale_price ?? item.price;
+  const sorted = [...variants].sort((a, b) => effectivePrice(a) - effectivePrice(b));
   const cheapestId = sorted[0].id;
 
   return (
@@ -76,7 +78,14 @@ function CompareCard({
               </div>
               <div className="flex items-center gap-3 flex-shrink-0">
                 <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
+                  {item.sale_price != null ? (
+                    <div className="flex items-baseline gap-1">
+                      <span className="font-bold text-sm text-rose-400">${item.sale_price.toFixed(2)}</span>
+                      <span className="text-xs line-through text-muted-foreground">${item.price.toFixed(2)}</span>
+                    </div>
+                  ) : (
+                    <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
+                  )}
                   {isCheapest && (
                     <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">
                       Best
@@ -154,7 +163,16 @@ function ResultCard({
             </a>
           </Link>
         </div>
-        <span className="font-bold text-sm flex-shrink-0">${item.price.toFixed(2)}</span>
+        <div className="flex-shrink-0 text-right">
+          {item.sale_price != null ? (
+            <>
+              <span className="font-bold text-sm text-rose-400">${item.sale_price.toFixed(2)}</span>
+              <span className="text-xs line-through text-muted-foreground ml-1">${item.price.toFixed(2)}</span>
+            </>
+          ) : (
+            <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
+          )}
+        </div>
       </div>
       <div className="flex items-center justify-between">
         <Badge variant="secondary" className="text-xs capitalize">

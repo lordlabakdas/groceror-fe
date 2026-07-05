@@ -6,7 +6,7 @@ import L from "leaflet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Globe, Store, Map, List } from "lucide-react";
+import { Search, MapPin, Globe, Map, List, Star } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // Fix default Leaflet marker icons broken by Vite's asset pipeline.
@@ -26,6 +26,8 @@ interface StoreItem {
   is_active: boolean;
   latitude: number | null;
   longitude: number | null;
+  avg_rating?: number | null;
+  rating_count?: number;
 }
 
 type ViewMode = "map" | "list";
@@ -321,6 +323,30 @@ function MapView({
   );
 }
 
+// ── Star display ─────────────────────────────────────────────────────────────
+
+function StarDisplay({ rating, count }: { rating?: number | null; count?: number }) {
+  if (!rating) return null;
+  const full = Math.round(rating);
+  return (
+    <div className="flex items-center gap-1 mt-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star
+          key={i}
+          className={cn(
+            "h-3 w-3",
+            i <= full ? "fill-amber-400 text-amber-400" : "text-muted-foreground/40"
+          )}
+        />
+      ))}
+      <span className="text-xs text-muted-foreground ml-0.5">
+        {rating.toFixed(1)}
+        {count != null && count > 0 && ` (${count})`}
+      </span>
+    </div>
+  );
+}
+
 // ── Store card ────────────────────────────────────────────────────────────────
 
 interface StoreCardProps {
@@ -377,6 +403,7 @@ function StoreCard({
                   <span className="truncate">{store.website}</span>
                 </p>
               )}
+              <StarDisplay rating={store.avg_rating} count={store.rating_count} />
             </div>
 
             <Badge

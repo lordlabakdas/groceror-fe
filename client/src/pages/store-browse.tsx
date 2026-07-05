@@ -1,12 +1,16 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus, Star } from "lucide-react";
 import { useAddToCart, useCart } from "@/lib/cart";
+import { useAuth } from "@/lib/auth-context";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { type GetStoreInventoryResponse, type Product } from "@/types/models";
 import { getProductImage } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
@@ -18,6 +22,163 @@ interface StoreDetail {
   location: string | null;
   website: string | null;
   is_active: boolean;
+  avg_rating?: number | null;
+  rating_count?: number;
+}
+
+interface RatingItem {
+  id: string;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+}
+
+interface RatingSummary {
+  avg_rating: number | null;
+  rating_count: number;
+  ratings: RatingItem[];
+}
+
+// ── Star components ───────────────────────────────────────────────────────────
+
+function StarDisplay({ rating, count }: { rating?: number | null; count?: number }) {
+  if (!rating) return null;
+  const full = Math.round(rating);
+  return (
+    <div className="flex items-center gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <Star key={i} className={cn("h-3.5 w-3.5", i <= full ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
+      ))}
+      <span className="text-sm font-medium ml-0.5">{rating.toFixed(1)}</span>
+      {count != null && count > 0 && (
+        <span className="text-xs text-muted-foreground">({count} review{count !== 1 ? "s" : ""})</span>
+      )}
+    </div>
+  );
+}
+
+function StarPicker({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  const [hover, setHover] = useState(0);
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((i) => (
+        <button
+          key={i}
+          type="button"
+          onClick={() => onChange(i)}
+          onMouseEnter={() => setHover(i)}
+          onMouseLeave={() => setHover(0)}
+        >
+          <Star
+            className={cn(
+              "h-6 w-6 transition-colors",
+              i <= (hover || value) ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30 hover:text-amber-400/50"
+            )}
+          />
+        </button>
+      ))}
+    </div>
+  );
+}
+
+// ── Ratings section ───────────────────────────────────────────────────────────
+
+function RatingsSection({ storeId }: { storeId: string }) {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [myRating, setMyRating] = useState(0);
+  const [myComment, setMyComment] = useState("");
+  const [showForm, setShowForm] = useState(false);
+
+  const { data } = useQuery<RatingSummary>({
+    queryKey: [`/stores/${storeId}/ratings`],
+    enabled: !!storeId,
+  });
+
+  const submitMutation = useMutation({
+    mutationFn: () =>
+      apiRequest("POST", `/stores/${storeId}/ratings`, { rating: myRating, comment: myComment || null }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/stores/${storeId}/ratings`] });
+      queryClient.invalidateQueries({ queryKey: [`/stores/${storeId}`] });
+      toast({ title: "Rating submitted", description: "Thanks for your feedback!" });
+      setShowForm(false);
+      setMyRating(0);
+      setMyComment("");
+    },
+    onError: (err: any) => {
+      toast({ title: "Failed", description: err.message ?? "Could not submit rating.", variant: "destructive" });
+    },
+  });
+
+  const ratings = data?.ratings ?? [];
+
+  return (
+    <div className="rounded-2xl border bg-card p-5 space-y-4">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="font-semibold text-sm">Customer Reviews</h2>
+          {data?.avg_rating ? (
+            <StarDisplay rating={data.avg_rating} count={data.rating_count} />
+          ) : (
+            <p className="text-xs text-muted-foreground mt-0.5">No reviews yet</p>
+          )}
+        </div>
+        {user?.entityType === "user" && !showForm && (
+          <Button size="sm" variant="outline" onClick={() => setShowForm(true)}>
+            Rate this store
+          </Button>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="space-y-3 rounded-xl border bg-muted/20 p-4">
+          <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide">Your rating</p>
+          <StarPicker value={myRating} onChange={setMyRating} />
+          <Textarea
+            placeholder="Leave a comment (optional)"
+            value={myComment}
+            onChange={(e) => setMyComment(e.target.value)}
+            className="text-sm resize-none"
+            rows={3}
+          />
+          <div className="flex gap-2 justify-end">
+            <Button variant="ghost" size="sm" onClick={() => { setShowForm(false); setMyRating(0); setMyComment(""); }}>
+              Cancel
+            </Button>
+            <Button
+              size="sm"
+              disabled={myRating === 0 || submitMutation.isPending}
+              onClick={() => submitMutation.mutate()}
+            >
+              {submitMutation.isPending ? "Submitting…" : "Submit"}
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {ratings.length > 0 && (
+        <div className="space-y-3">
+          {ratings.map((r) => (
+            <div key={r.id} className="space-y-1">
+              <div className="flex items-center gap-2">
+                <div className="flex gap-0.5">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <Star key={i} className={cn("h-3 w-3", i <= r.rating ? "fill-amber-400 text-amber-400" : "text-muted-foreground/30")} />
+                  ))}
+                </div>
+                <span className="text-xs text-muted-foreground">
+                  {new Date(r.created_at).toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" })}
+                </span>
+              </div>
+              {r.comment && <p className="text-sm text-muted-foreground">{r.comment}</p>}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function StoreBrowse() {
@@ -53,6 +214,7 @@ export default function StoreBrowse() {
     stock: item.quantity,
     storeId: item.store_id,
     storeName: storeName,
+    salePrice: item.sale_price ?? null,
   }));
 
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
@@ -124,24 +286,32 @@ export default function StoreBrowse() {
         </div>
 
         {/* Right cluster */}
-        <div className="flex items-center gap-2 flex-shrink-0">
-          <span className="text-sm text-muted-foreground">
-            {products.length} item{products.length !== 1 ? "s" : ""}
-          </span>
-          {store && (
-            <Badge
-              className={cn(
-                "text-xs",
-                store.is_active
-                  ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
-                  : "bg-muted text-muted-foreground border-border hover:bg-muted"
-              )}
-            >
-              {store.is_active ? "Open" : "Closed"}
-            </Badge>
+        <div className="flex flex-col items-end gap-2 flex-shrink-0">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">
+              {products.length} item{products.length !== 1 ? "s" : ""}
+            </span>
+            {store && (
+              <Badge
+                className={cn(
+                  "text-xs",
+                  store.is_active
+                    ? "bg-amber-500/20 text-amber-400 border border-amber-500/30 hover:bg-amber-500/20"
+                    : "bg-muted text-muted-foreground border-border hover:bg-muted"
+                )}
+              >
+                {store.is_active ? "Open" : "Closed"}
+              </Badge>
+            )}
+          </div>
+          {store?.avg_rating && (
+            <StarDisplay rating={store.avg_rating} count={store.rating_count} />
           )}
         </div>
       </div>
+
+      {/* ── Ratings ───────────────────────────────────────── */}
+      <RatingsSection storeId={storeId} />
 
       {/* ── Search + cart ─────────────────────────────────── */}
       <div className="flex items-center gap-3">
@@ -265,7 +435,14 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
       <div className="p-4 flex items-center justify-between">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onProductClick}>
           <p className="font-semibold text-sm leading-tight">{product.name}</p>
-          <p className="text-base font-bold text-primary mt-0.5">${product.price}</p>
+          {product.salePrice != null ? (
+            <div className="flex items-baseline gap-1.5 mt-0.5">
+              <span className="text-base font-bold text-rose-400">${product.salePrice.toFixed(2)}</span>
+              <span className="text-xs line-through text-muted-foreground">${product.price}</span>
+            </div>
+          ) : (
+            <p className="text-base font-bold text-primary mt-0.5">${product.price}</p>
+          )}
         </div>
         {cartQuantity > 0 ? (
           <div className="flex items-center gap-1 ml-2 flex-shrink-0">
@@ -328,7 +505,16 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
           </DialogHeader>
 
           <div className="flex items-center justify-between">
-            <span className="text-2xl font-bold text-primary">${product.price}</span>
+            <div>
+              {product.salePrice != null ? (
+                <div className="flex items-baseline gap-2">
+                  <span className="text-2xl font-bold text-rose-400">${product.salePrice.toFixed(2)}</span>
+                  <span className="text-base line-through text-muted-foreground">${product.price}</span>
+                </div>
+              ) : (
+                <span className="text-2xl font-bold text-primary">${product.price}</span>
+              )}
+            </div>
             <span className="text-sm text-muted-foreground">
               {outOfStock ? "Out of stock" : `${product.stock} in stock`}
             </span>
