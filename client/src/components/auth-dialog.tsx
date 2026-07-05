@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useLocation } from "wouter";
+import { AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -10,6 +11,22 @@ import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth, decodeToken } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
+import { friendlyError } from "@/lib/errors";
+
+const WRONG_CODE = "That code doesn't match. Check the SMS and try again.";
+
+function FormError({ message }: { message: string | null }) {
+  if (!message) return null;
+  return (
+    <div
+      role="alert"
+      className="flex items-start gap-2 rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2.5 text-sm text-destructive animate-in fade-in slide-in-from-top-1 duration-200"
+    >
+      <AlertCircle className="h-4 w-4 mt-0.5 flex-shrink-0" />
+      <span>{message}</span>
+    </div>
+  );
+}
 
 interface AuthDialogProps {
   isOpen: boolean;
@@ -51,6 +68,13 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   // "user" maps to groceror's entity_type="user" (shopper); "store" = grocer
   const [entityType, setEntityType] = useState<"user" | "store">(defaultEntityType);
   const [isLoading, setIsLoading] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+
+  // Clear any error from the previous screen when navigating between views.
+  function switchView(v: AuthView) {
+    setFormError(null);
+    setView(v);
+  }
 
   function resetAndClose() {
     setPhone("");
@@ -58,7 +82,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
     setOtp("");
     setEntityType("user");
     setIsLoading(false);
-    setView("login");
+    setFormError(null);
+    switchView("login");
     onOpenChange(false);
   }
 
@@ -67,6 +92,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     try {
       const res = await apiRequest("POST", "/user/login", { phone, password });
       const data = await res.json();
@@ -75,8 +101,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       resetAndClose();
       const decoded = decodeToken(data.token);
       setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
-    } catch (err: any) {
-      toast({ title: "Login failed", description: err.message, variant: "destructive" });
+    } catch (err) {
+      setFormError(friendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -87,11 +113,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   async function handleRegisterSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     try {
       await apiRequest("POST", "/user/send-otp", { phone });
-      setView("register_otp");
-    } catch (err: any) {
-      toast({ title: "Could not send OTP", description: err.message, variant: "destructive" });
+      switchView("register_otp");
+    } catch (err) {
+      setFormError(friendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -102,12 +129,13 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   async function handleRegisterVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     try {
       await apiRequest("POST", "/user/verify-otp", { phone, otp });
       setOtp("");
-      setView("register_password");
-    } catch (err: any) {
-      toast({ title: "OTP verification failed", description: err.message, variant: "destructive" });
+      switchView("register_password");
+    } catch (err) {
+      setFormError(friendlyError(err, { 400: WRONG_CODE, 401: WRONG_CODE }));
     } finally {
       setIsLoading(false);
     }
@@ -119,6 +147,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
     e.preventDefault();
     setIsLoading(true);
     try {
+      setFormError(null);
       await apiRequest("POST", "/user/register", {
         phone,
         entity_type: entityType,
@@ -138,8 +167,8 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       resetAndClose();
       const decoded = decodeToken(token);
       setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
-    } catch (err: any) {
-      toast({ title: "Registration failed", description: err.message, variant: "destructive" });
+    } catch (err) {
+      setFormError(friendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -150,11 +179,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   async function handleForgotSendOtp(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     try {
       await apiRequest("POST", "/user/send-otp", { phone });
-      setView("forgot_otp");
-    } catch (err: any) {
-      toast({ title: "Could not send OTP", description: err.message, variant: "destructive" });
+      switchView("forgot_otp");
+    } catch (err) {
+      setFormError(friendlyError(err));
     } finally {
       setIsLoading(false);
     }
@@ -168,6 +198,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
   async function handleForgotVerifyOtp(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
+    setFormError(null);
     try {
       await apiRequest("POST", "/user/verify-otp", { phone, otp });
       toast({
@@ -177,9 +208,9 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       });
       setOtp("");
       setPhone("");
-      setView("login");
-    } catch (err: any) {
-      toast({ title: "OTP verification failed", description: err.message, variant: "destructive" });
+      switchView("login");
+    } catch (err) {
+      setFormError(friendlyError(err, { 400: WRONG_CODE, 401: WRONG_CODE }));
     } finally {
       setIsLoading(false);
     }
@@ -220,11 +251,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 type="button"
                 variant="link"
                 className="px-0 font-normal"
-                onClick={() => { setPhone(""); setView("forgot_phone"); }}
+                onClick={() => { setPhone(""); switchView("forgot_phone"); }}
               >
                 Forgot password?
               </Button>
             </div>
+            <FormError message={formError} />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Logging in…" : "Login"}
             </Button>
@@ -234,7 +266,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 type="button"
                 variant="link"
                 className="h-auto px-0 font-normal"
-                onClick={() => { setPhone(""); setPassword(""); setView("register_phone"); }}
+                onClick={() => { setPhone(""); setPassword(""); switchView("register_phone"); }}
               >
                 Register
               </Button>
@@ -273,11 +305,12 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 </div>
               </RadioGroup>
             </div>
+            <FormError message={formError} />
             <div className="flex justify-between">
               <Button
                 type="button"
                 variant="ghost"
-                onClick={() => { setPhone(""); setView("login"); }}
+                onClick={() => { setPhone(""); switchView("login"); }}
               >
                 Back to Login
               </Button>
@@ -304,8 +337,9 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 </InputOTPGroup>
               </InputOTP>
             </div>
+            <FormError message={formError} />
             <div className="flex justify-between">
-              <Button type="button" variant="ghost" onClick={() => setView("register_phone")}>
+              <Button type="button" variant="ghost" onClick={() => switchView("register_phone")}>
                 Back
               </Button>
               <Button type="submit" disabled={isLoading || otp.length < 6}>
@@ -334,6 +368,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
               />
               <PasswordStrength password={password} />
             </div>
+            <FormError message={formError} />
             <Button type="submit" className="w-full" disabled={isLoading}>
               {isLoading ? "Creating account…" : "Create Account"}
             </Button>
@@ -357,8 +392,9 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 required
               />
             </div>
+            <FormError message={formError} />
             <div className="flex justify-between">
-              <Button type="button" variant="ghost" onClick={() => setView("login")}>
+              <Button type="button" variant="ghost" onClick={() => switchView("login")}>
                 Back to Login
               </Button>
               <Button type="submit" disabled={isLoading}>
@@ -384,8 +420,9 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 </InputOTPGroup>
               </InputOTP>
             </div>
+            <FormError message={formError} />
             <div className="flex justify-between">
-              <Button type="button" variant="ghost" onClick={() => setView("forgot_phone")}>
+              <Button type="button" variant="ghost" onClick={() => switchView("forgot_phone")}>
                 Back
               </Button>
               <Button type="submit" disabled={isLoading || otp.length < 6}>
