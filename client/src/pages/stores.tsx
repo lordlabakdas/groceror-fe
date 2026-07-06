@@ -6,7 +6,7 @@ import L from "leaflet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Search, MapPin, Globe, Map, List, Star, Navigation, Sparkles } from "lucide-react";
+import { Search, MapPin, Globe, Map, List, Star, Navigation, Sparkles, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -65,6 +65,7 @@ interface StoreItem {
   longitude: number | null;
   avg_rating?: number | null;
   rating_count?: number;
+  is_verified?: boolean;
 }
 
 type ViewMode = "map" | "list";
@@ -91,6 +92,68 @@ function createMarkerIcon(isActive: boolean): L.DivIcon {
     iconAnchor: [size / 2, size / 2],
     popupAnchor: [0, -(size / 2 + 6)],
   });
+}
+
+// ── Trending Section ──────────────────────────────────────────────────────────
+
+interface TrendingItem {
+  inventory_id: string;
+  inventory_name: string;
+  category: string;
+  price: number;
+  store_id: string;
+  store_name: string;
+  sale_price?: number | null;
+  flash_sale_price?: number | null;
+  order_count: number;
+  is_verified_store: boolean;
+}
+
+function TrendingSection() {
+  const { data: items = [], isLoading } = useQuery<TrendingItem[]>({
+    queryKey: ["/inventory/trending"],
+  });
+
+  if (isLoading) return <div className="h-28 bg-muted rounded-xl animate-pulse" />;
+  if (items.length === 0) return null;
+
+  const effectivePrice = (item: TrendingItem) => item.flash_sale_price ?? item.sale_price ?? item.price;
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-1.5">
+        <Flame className="h-4 w-4 text-amber-400" />
+        <span className="text-sm font-semibold">Trending this week</span>
+      </div>
+      <div className="flex gap-3 overflow-x-auto pb-1 -mx-1 px-1 snap-x snap-mandatory">
+        {items.slice(0, 8).map((item) => {
+          const price = effectivePrice(item);
+          const isOnSale = price < item.price;
+          return (
+            <div
+              key={item.inventory_id}
+              className="flex-shrink-0 snap-start w-36 rounded-xl border bg-card p-3 space-y-1"
+            >
+              <p className="text-xs font-semibold leading-tight line-clamp-2">{item.inventory_name}</p>
+              <div className="flex items-center gap-1">
+                <span className={cn("text-sm font-bold", isOnSale ? "text-amber-400" : "text-primary")}>
+                  ${price.toFixed(2)}
+                </span>
+                {isOnSale && <span className="text-xs line-through text-muted-foreground">${item.price.toFixed(2)}</span>}
+              </div>
+              <div className="flex items-center gap-1">
+                <p className="text-xs text-muted-foreground truncate">{item.store_name}</p>
+                {item.is_verified_store && (
+                  <svg viewBox="0 0 24 24" fill="currentColor" className="h-3 w-3 text-blue-400 flex-shrink-0"><path d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-.53 3.756 3.745 3.745 0 01-3.456 1.944 3.745 3.745 0 01-3.068 1.593c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.756-.53 3.745 3.745 0 01-1.944-3.456 3.745 3.745 0 01-1.593-3.068c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 01.53-3.756 3.745 3.745 0 013.456-1.944 3.745 3.745 0 013.068-1.593c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.756.53 3.745 3.745 0 011.944 3.456A3.745 3.745 0 0121 12z"/></svg>
+                )}
+              </div>
+              <p className="text-xs text-muted-foreground/60">{item.order_count} sold</p>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 }
 
 // ── Main page ─────────────────────────────────────────────────────────────────
@@ -224,6 +287,7 @@ export default function Stores() {
 
           {/* Card list */}
           <div className="flex-1 overflow-y-auto p-3 space-y-2">
+            <TrendingSection />
             {featured.length > 0 && (
               <div className="pb-2">
                 <FeaturedSection featuredIds={featuredIds} />
@@ -293,6 +357,7 @@ export default function Stores() {
           </div>
         </div>
 
+        <TrendingSection />
         {featured.length > 0 && <FeaturedSection featuredIds={featuredIds} />}
 
         {isLoading ? (
@@ -473,9 +538,16 @@ function StoreCard({
             </div>
 
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-sm leading-tight truncate group-hover:text-primary transition-colors">
-                {store.name}
-              </p>
+              <div className="flex items-center gap-1">
+                <p className="font-semibold text-sm leading-tight truncate group-hover:text-primary transition-colors">
+                  {store.name}
+                </p>
+                {store.is_verified && (
+                  <span title="Verified" className="text-blue-400 flex-shrink-0">
+                    <svg viewBox="0 0 24 24" fill="currentColor" className="h-3.5 w-3.5"><path d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-.53 3.756 3.745 3.745 0 01-3.456 1.944 3.745 3.745 0 01-3.068 1.593c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.756-.53 3.745 3.745 0 01-1.944-3.456 3.745 3.745 0 01-1.593-3.068c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 01.53-3.756 3.745 3.745 0 013.456-1.944 3.745 3.745 0 013.068-1.593c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.756.53 3.745 3.745 0 011.944 3.456A3.745 3.745 0 0121 12z"/></svg>
+                  </span>
+                )}
+              </div>
               {store.location && (
                 <p className="text-xs text-muted-foreground flex items-center gap-1 mt-0.5">
                   <MapPin className="h-3 w-3 flex-shrink-0" />

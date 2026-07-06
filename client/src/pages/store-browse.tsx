@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRoute, Link } from "wouter";
 import { Input } from "@/components/ui/input";
@@ -24,6 +24,7 @@ interface StoreDetail {
   is_active: boolean;
   avg_rating?: number | null;
   rating_count?: number;
+  is_verified?: boolean;
 }
 
 interface RatingItem {
@@ -247,6 +248,17 @@ export default function StoreBrowse() {
     },
   });
 
+  const backInStockMutation = useMutation({
+    mutationFn: async (inventoryId: string) => {
+      await apiRequest("POST", `/back-in-stock/${inventoryId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/back-in-stock"] });
+      toast({ description: "You'll be notified when it's back in stock" });
+    },
+    onError: () => toast({ description: "Could not set alert", variant: "destructive" }),
+  });
+
   const storeName = store?.name ?? "Store";
 
   const products: Product[] = (inventoryData?.inventory ?? []).map((item) => ({
@@ -260,6 +272,8 @@ export default function StoreBrowse() {
     storeId: item.store_id,
     storeName: storeName,
     salePrice: item.sale_price ?? null,
+    flashSalePrice: item.flash_sale_price ?? null,
+    flashSaleEndAt: item.flash_sale_end_at ?? null,
   }));
 
   const categories = ["All", ...Array.from(new Set(products.map((p) => p.category).filter(Boolean)))];
@@ -308,7 +322,14 @@ export default function StoreBrowse() {
 
         {/* Name + meta */}
         <div className="flex-1 min-w-0">
-          <h1 className="text-2xl font-bold truncate">{storeName}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold truncate">{storeName}</h1>
+            {store?.is_verified && (
+              <span title="Verified store" className="flex-shrink-0 text-blue-400">
+                <svg viewBox="0 0 24 24" fill="currentColor" className="h-5 w-5"><path d="M9 12.75L11.25 15 15 9.75M21 12c0 1.268-.63 2.39-1.593 3.068a3.745 3.745 0 01-.53 3.756 3.745 3.745 0 01-3.456 1.944 3.745 3.745 0 01-3.068 1.593c-1.268 0-2.39-.63-3.068-1.593a3.745 3.745 0 01-3.756-.53 3.745 3.745 0 01-1.944-3.456 3.745 3.745 0 01-1.593-3.068c0-1.268.63-2.39 1.593-3.068a3.745 3.745 0 01.53-3.756 3.745 3.745 0 013.456-1.944 3.745 3.745 0 013.068-1.593c1.268 0 2.39.63 3.068 1.593a3.745 3.745 0 013.756.53 3.745 3.745 0 011.944 3.456A3.745 3.745 0 0121 12z"/></svg>
+              </span>
+            )}
+          </div>
           <div className="flex flex-wrap items-center gap-3 mt-1">
             {store?.location && (
               <span className="flex items-center gap-1 text-sm text-muted-foreground">
@@ -441,6 +462,7 @@ export default function StoreBrowse() {
               onProductClick={() => setSelectedProduct(product)}
               wishlisted={wishlistSet.has(product.id)}
               onToggleWishlist={isLoggedInShopper ? () => toggleWishlistMutation.mutate({ inventoryId: product.id, inList: wishlistSet.has(product.id) }) : undefined}
+              onNotifyBackInStock={isLoggedInShopper && product.stock <= 0 ? () => backInStockMutation.mutate(product.id) : undefined}
             />
           ))}
         </div>
@@ -473,10 +495,26 @@ interface ProductCardProps {
   onProductClick: () => void;
   wishlisted?: boolean;
   onToggleWishlist?: () => void;
+  onNotifyBackInStock?: () => void;
 }
 
-function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, onProductClick, wishlisted, onToggleWishlist }: ProductCardProps) {
+function FlashCountdown({ endAt }: { endAt: string }) {
+  const [secs, setSecs] = useState(() => Math.max(0, Math.floor((new Date(endAt).getTime() - Date.now()) / 1000)));
+  useEffect(() => {
+    if (secs <= 0) return;
+    const t = setInterval(() => setSecs((s) => Math.max(0, s - 1)), 1000);
+    return () => clearInterval(t);
+  }, []);
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return <span className="font-mono text-xs">{h > 0 ? `${pad(h)}:` : ""}{pad(m)}:{pad(s)}</span>;
+}
+
+function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, onProductClick, wishlisted, onToggleWishlist, onNotifyBackInStock }: ProductCardProps) {
   const outOfStock = product.stock <= 0;
+  const effectivePrice = product.flashSalePrice ?? product.salePrice ?? null;
 
   return (
     <div className="rounded-xl border overflow-hidden shadow-sm hover:shadow-md transition-shadow group">
@@ -493,10 +531,23 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
           {product.category}
         </Badge>
         {outOfStock && (
-          <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/40 flex flex-col items-center justify-center gap-2">
             <span className="text-white text-sm font-semibold bg-black/60 px-3 py-1 rounded-full">
               Out of stock
             </span>
+            {onNotifyBackInStock && (
+              <button
+                className="text-xs bg-emerald-500/80 text-white px-3 py-1 rounded-full hover:bg-emerald-500 transition-colors"
+                onClick={(e) => { e.stopPropagation(); onNotifyBackInStock(); }}
+              >
+                Notify me when back
+              </button>
+            )}
+          </div>
+        )}
+        {product.flashSalePrice != null && product.flashSaleEndAt && (
+          <div className="absolute bottom-2 left-2 flex items-center gap-1 bg-amber-500/90 text-black text-xs font-semibold px-2 py-0.5 rounded-full">
+            ⚡ <FlashCountdown endAt={product.flashSaleEndAt} />
           </div>
         )}
         {onToggleWishlist && (
@@ -511,9 +562,11 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
       <div className="p-4 flex items-center justify-between">
         <div className="flex-1 min-w-0 cursor-pointer" onClick={onProductClick}>
           <p className="font-semibold text-sm leading-tight">{product.name}</p>
-          {product.salePrice != null ? (
+          {effectivePrice != null ? (
             <div className="flex items-baseline gap-1.5 mt-0.5">
-              <span className="text-base font-bold text-rose-400">${product.salePrice.toFixed(2)}</span>
+              <span className={cn("text-base font-bold", product.flashSalePrice != null ? "text-amber-400" : "text-rose-400")}>
+                ${effectivePrice.toFixed(2)}
+              </span>
               <span className="text-xs line-through text-muted-foreground">${product.price}</span>
             </div>
           ) : (

@@ -10,6 +10,8 @@ export interface GrocerorInventoryItem {
   notes: string | null;
   expiry_date?: string | null; // "YYYY-MM-DD" — earliest upcoming expiry, if set
   sale_price?: number | null;  // active promotion price, if any
+  flash_sale_price?: number | null;
+  flash_sale_end_at?: string | null;
 }
 
 export interface GetStoreInventoryResponse {
@@ -29,6 +31,8 @@ export interface Product {
   storeId: string;     // groceror store UUID, required by cart endpoints
   storeName?: string;  // display name of the store, used for cross-store cart warning
   salePrice?: number | null;
+  flashSalePrice?: number | null;
+  flashSaleEndAt?: string | null;
 }
 
 export interface CartItem {
