@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus, Star, Heart } from "lucide-react";
+import { Search, ShoppingCart, ChevronLeft, MapPin, Globe, Minus, Plus, Star, Heart, UserPlus, UserMinus } from "lucide-react";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/queryClient";
@@ -213,6 +213,26 @@ export default function StoreBrowse() {
   });
   const wishlistSet = new Set((wishlistData ?? []).map((w) => w.inventory_id));
 
+  // ── Store follow ─────────────────────────────────────────────────────────
+  const { data: followData } = useQuery<{ store_id: string; follower_count: number; is_following: boolean }>({
+    queryKey: [`/stores/${storeId}/followers`],
+    enabled: !!storeId,
+  });
+
+  const toggleFollowMutation = useMutation({
+    mutationFn: async (isFollowing: boolean) => {
+      if (isFollowing) {
+        await apiRequest("DELETE", `/stores/${storeId}/follow`);
+      } else {
+        await apiRequest("POST", `/stores/${storeId}/follow`);
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [`/stores/${storeId}/followers`] });
+      queryClient.invalidateQueries({ queryKey: ["/stores/following"] });
+    },
+  });
+
   const toggleWishlistMutation = useMutation({
     mutationFn: async ({ inventoryId, inList }: { inventoryId: string; inList: boolean }) => {
       if (inList) {
@@ -331,6 +351,24 @@ export default function StoreBrowse() {
           </div>
           {store?.avg_rating && (
             <StarDisplay rating={store.avg_rating} count={store.rating_count} />
+          )}
+          {isLoggedInShopper && (
+            <Button
+              size="sm"
+              variant={followData?.is_following ? "outline" : "secondary"}
+              className="gap-1.5 h-8 text-xs"
+              onClick={() => toggleFollowMutation.mutate(followData?.is_following ?? false)}
+              disabled={toggleFollowMutation.isPending}
+            >
+              {followData?.is_following ? (
+                <><UserMinus className="h-3.5 w-3.5" /> Unfollow</>
+              ) : (
+                <><UserPlus className="h-3.5 w-3.5" /> Follow</>
+              )}
+              {followData && followData.follower_count > 0 && (
+                <span className="text-muted-foreground">· {followData.follower_count}</span>
+              )}
+            </Button>
           )}
         </div>
       </div>

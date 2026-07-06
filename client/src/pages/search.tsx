@@ -1,12 +1,15 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Search, Store, Minus, Plus, TrendingDown } from "lucide-react";
+import { Search, Store, Minus, Plus, TrendingDown, SlidersHorizontal, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
+
+const CATEGORIES = ["Fruits & Vegetables", "Dairy & Eggs", "Meat & Seafood", "Bakery", "Beverages", "Snacks", "Frozen", "Pantry", "Personal Care", "Household"];
 
 interface SearchResultItem {
   id: string;
@@ -217,6 +220,11 @@ function ResultCard({
 export default function SearchPage() {
   const [input, setInput] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [showFilters, setShowFilters] = useState(false);
+  const [category, setCategory] = useState<string>("");
+  const [minPrice, setMinPrice] = useState("");
+  const [maxPrice, setMaxPrice] = useState("");
+  const [inStockOnly, setInStockOnly] = useState(true);
   const addToCart = useAddToCart();
   const { state, dispatch } = useCart();
 
@@ -225,10 +233,17 @@ export default function SearchPage() {
     return () => clearTimeout(t);
   }, [input]);
 
-  const searchUrl =
-    debouncedQuery.length >= 2
-      ? `/inventory/search?q=${encodeURIComponent(debouncedQuery)}`
-      : null;
+  const searchUrl = useMemo(() => {
+    if (debouncedQuery.length < 2) return null;
+    const params = new URLSearchParams({ q: debouncedQuery });
+    if (category) params.set("category", category);
+    if (minPrice) params.set("min_price", minPrice);
+    if (maxPrice) params.set("max_price", maxPrice);
+    if (!inStockOnly) params.set("in_stock", "false");
+    return `/inventory/search?${params.toString()}`;
+  }, [debouncedQuery, category, minPrice, maxPrice, inStockOnly]);
+
+  const activeFilters = [category, minPrice, maxPrice, !inStockOnly].filter(Boolean).length;
 
   const { data, isLoading, isFetching } = useQuery<SearchResponse>({
     queryKey: [searchUrl],
@@ -285,15 +300,76 @@ export default function SearchPage() {
         <p className="text-sm text-muted-foreground mt-0.5">Find items across all stores</p>
       </div>
 
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          autoFocus
-          placeholder="Search for apples, milk, bread…"
-          value={input}
-          onChange={(e) => setInput(e.target.value)}
-          className="pl-9 h-11"
-        />
+      <div className="space-y-2">
+        <div className="relative flex gap-2">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              autoFocus
+              placeholder="Search for apples, milk, bread…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
+              className="pl-9 h-11"
+            />
+          </div>
+          <Button
+            variant={showFilters ? "default" : "outline"}
+            size="icon"
+            className="h-11 w-11 flex-shrink-0 relative"
+            onClick={() => setShowFilters((v) => !v)}
+          >
+            <SlidersHorizontal className="h-4 w-4" />
+            {activeFilters > 0 && (
+              <span className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
+                {activeFilters}
+              </span>
+            )}
+          </Button>
+        </div>
+
+        {showFilters && (
+          <div className="p-3 rounded-xl border bg-card space-y-3">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+              <Select value={category} onValueChange={setCategory}>
+                <SelectTrigger className="h-8 text-xs col-span-2">
+                  <SelectValue placeholder="All categories" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="">All categories</SelectItem>
+                  {CATEGORIES.map((c) => <SelectItem key={c} value={c}>{c}</SelectItem>)}
+                </SelectContent>
+              </Select>
+              <Input
+                className="h-8 text-xs"
+                placeholder="Min price"
+                value={minPrice}
+                onChange={(e) => setMinPrice(e.target.value.replace(/[^\d.]/g, ""))}
+              />
+              <Input
+                className="h-8 text-xs"
+                placeholder="Max price"
+                value={maxPrice}
+                onChange={(e) => setMaxPrice(e.target.value.replace(/[^\d.]/g, ""))}
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <label className="flex items-center gap-2 cursor-pointer text-sm">
+                <input
+                  type="checkbox"
+                  checked={inStockOnly}
+                  onChange={(e) => setInStockOnly(e.target.checked)}
+                  className="rounded"
+                />
+                In stock only
+              </label>
+              {activeFilters > 0 && (
+                <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setCategory(""); setMinPrice(""); setMaxPrice(""); setInStockOnly(true); }}>
+                  <X className="h-3 w-3 mr-1" /> Clear filters
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {debouncedQuery.length >= 2 && busy && (

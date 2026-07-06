@@ -24,6 +24,8 @@ import BulkRulesPage from "@/pages/bulk-rules";
 import DisputesPage from "@/pages/disputes";
 import WishlistPage from "@/pages/wishlist";
 import ScheduledOrdersPage from "@/pages/scheduled-orders";
+import FollowingPage from "@/pages/following";
+import StockAlertsPage from "@/pages/stock-alerts";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
@@ -61,6 +63,8 @@ function Router() {
       <Route path="/disputes">{() => <ProtectedRoute component={DisputesPage} />}</Route>
       <Route path="/wishlist">{() => <BuyerRoute component={WishlistPage} />}</Route>
       <Route path="/scheduled-orders">{() => <BuyerRoute component={ScheduledOrdersPage} />}</Route>
+      <Route path="/following">{() => <BuyerRoute component={FollowingPage} />}</Route>
+      <Route path="/stock-alerts">{() => <StoreOwnerRoute component={StockAlertsPage} />}</Route>
       <Route path="/bulk-rules">{() => <StoreOwnerRoute component={BulkRulesPage} />}</Route>
       <Route path="/coupons">{() => <StoreOwnerRoute component={CouponsPage} />}</Route>
       <Route path="/delivery-zone">{() => <StoreOwnerRoute component={DeliveryZonePage} />}</Route>
