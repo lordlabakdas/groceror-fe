@@ -16,8 +16,24 @@ import { Search, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/lib/auth-context";
+import { Skeleton } from "@/components/ui/skeleton";
 
-import { CATALOG, CATEGORY_ENUM, type CatalogItem } from "@/lib/catalog";
+import { CATEGORY_ENUM, getProductImage } from "@/lib/catalog";
+import type { GetProductsResponse } from "@/types/models";
+
+// Reverse of CATEGORY_ENUM: "PRODUCE" -> "Produce".
+const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
+  Object.entries(CATEGORY_ENUM).map(([label, enumValue]) => [enumValue, label]),
+);
+
+// UI-facing catalog item, mapped from the raw GrocerorProduct API shape.
+export interface CatalogItem {
+  id: string;
+  name: string;
+  category: string; // display label, e.g. "Produce"
+  imageUrl: string;
+  defaultPrice: number;
+}
 
 // ---------------------------------------------------------------------------
 // Add-to-inventory dialog
@@ -195,7 +211,24 @@ export default function Products() {
   });
   const profileIncomplete = profile && (!profile.name || !profile.location);
 
-  const filtered = CATALOG.filter((item) => {
+  const {
+    data: productsData,
+    isLoading: productsLoading,
+    isError: productsError,
+    refetch: refetchProducts,
+  } = useQuery<GetProductsResponse>({
+    queryKey: ["/products"],
+  });
+
+  const catalog: CatalogItem[] = (productsData?.products ?? []).map((p) => ({
+    id: p.id,
+    name: p.name,
+    category: CATEGORY_LABEL[p.category] ?? p.category,
+    imageUrl: p.image_url || getProductImage(p.name, p.category),
+    defaultPrice: p.default_price,
+  }));
+
+  const filtered = catalog.filter((item) => {
     const matchesCategory = category === "All" || item.category === category;
     const matchesSearch = item.name.toLowerCase().includes(search.toLowerCase());
     return matchesCategory && matchesSearch;
@@ -249,13 +282,32 @@ export default function Products() {
         </div>
       </div>
 
-      {filtered.length === 0 ? (
+      {productsLoading ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <div key={i} className="rounded-xl border overflow-hidden shadow-sm">
+              <Skeleton className="h-48 w-full rounded-none" />
+              <div className="p-3 space-y-2">
+                <Skeleton className="h-4 w-2/3" />
+                <Skeleton className="h-3 w-1/3" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : productsError ? (
+        <div className="text-center py-12 space-y-3">
+          <p className="text-muted-foreground">Failed to load products.</p>
+          <Button variant="outline" size="sm" onClick={() => refetchProducts()}>
+            Retry
+          </Button>
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground">No products found.</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {filtered.map((item) => (
             <CatalogCard
-              key={item.name}
+              key={item.id}
               item={item}
               added={recentlyAdded.has(item.name)}
               onAdd={() => setDialogItem(item)}

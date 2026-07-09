@@ -18,6 +18,19 @@ export interface GetStoreInventoryResponse {
   inventory: GrocerorInventoryItem[];
 }
 
+// Shape returned by GET /products (master catalog, not store-specific).
+export interface GrocerorProduct {
+  id: string;          // UUID
+  name: string;
+  category: string;    // "GROCERY" | "PRODUCE" | "MEAT" | "DAIRY" | "BAKERY" | "OTHER"
+  image_url: string | null;
+  default_price: number;
+}
+
+export interface GetProductsResponse {
+  products: GrocerorProduct[];
+}
+
 // Normalised product shape used throughout the UI.
 // id and storeId are UUID strings (groceror uses UUIDs, not integer PKs).
 export interface Product {
