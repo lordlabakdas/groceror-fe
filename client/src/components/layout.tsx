@@ -8,6 +8,7 @@ import { useAuth } from "@/lib/auth-context";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useOrderAlerts } from "@/hooks/use-order-alerts";
+import { useSSE } from "@/hooks/use-sse";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuery } from "@tanstack/react-query";
 
@@ -37,6 +38,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   // Chime + toast + browser notification when a new order lands.
   useOrderAlerts(user?.entityType === "store");
+  useSSE();
 
   return (
     <div className="min-h-screen bg-background">
