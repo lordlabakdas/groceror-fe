@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock } from "lucide-react";
+import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock, ChevronDown } from "lucide-react";
 import { Sheet, SheetContent } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,6 +16,15 @@ import { useToast } from "@/hooks/use-toast";
 // ---------------------------------------------------------------------------
 
 type DrawerState = "cart" | "payment" | "confirmation";
+
+interface AvailableCoupon {
+  id: string;
+  code: string;
+  discount_type: "percent" | "fixed";
+  discount_value: number;
+  min_order_amount: number | null;
+  valid_until: string | null;
+}
 
 interface CouponResult {
   valid: boolean;
@@ -400,6 +410,12 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       .catch(() => {});
   }, [storeId]);
 
+  const { data: availableCoupons = [] } = useQuery<AvailableCoupon[]>({
+    queryKey: [`/coupons/available?store_id=${storeId}`],
+    enabled: !!storeId,
+  });
+  const [showCouponList, setShowCouponList] = useState(false);
+
   const { discount: bulkDiscount, applied: bulkApplied } = computeBulkDiscount(items, bulkRules);
   const couponDiscount = couponResult?.valid ? couponResult.discount_amount : 0;
   const loyaltyDiscount = Math.min(pointsToRedeem / 100, Math.max(0, total - bulkDiscount));
@@ -420,17 +436,26 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       touched[field] && errors[field] ? "border-destructive" : "border-input"
     }`;
 
-  async function applyCoupon() {
-    if (!couponInput.trim()) return;
+  async function applyCoupon(code?: string) {
+    const raw = (code ?? couponInput).trim().toUpperCase();
+    if (!raw) return;
+    if (code) setCouponInput(code.toUpperCase());
     setCouponChecking(true);
     try {
-      const res = await apiRequest("GET", `/coupons/${couponInput.trim().toUpperCase()}/validate?order_total=${total}`);
-      const data = await res.json();
+      const res = await apiRequest("GET", `/coupons/${raw}/validate?order_total=${total}`);
+      const data: CouponResult = await res.json();
       setCouponResult(data);
+      if (data.valid) {
+        toast({ description: `Coupon applied — you save $${data.discount_amount.toFixed(2)}!` });
+      } else {
+        toast({ description: data.message, variant: "destructive" });
+      }
     } catch {
+      toast({ description: "Could not validate coupon. Try again.", variant: "destructive" });
       setCouponResult(null);
     } finally {
       setCouponChecking(false);
+      setShowCouponList(false);
     }
   }
 
@@ -501,21 +526,79 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
             <Tag className="h-3 w-3" /> Coupon code
           </p>
-          <div className="flex gap-2">
-            <Input
-              placeholder="e.g. SAVE10"
-              value={couponInput}
-              onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponResult(null); }}
-              className="h-9 text-sm font-mono"
-            />
-            <Button variant="outline" size="sm" className="h-9 shrink-0" onClick={applyCoupon} disabled={couponChecking || !couponInput.trim()}>
-              {couponChecking ? "…" : "Apply"}
-            </Button>
-          </div>
-          {couponResult && (
-            <p className={`text-xs ${couponResult.valid ? "text-emerald-400" : "text-destructive"}`}>
-              {couponResult.valid ? `✓ ${couponResult.message}` : `✗ ${couponResult.message}`}
-            </p>
+
+          {/* Available coupons list */}
+          {availableCoupons.length > 0 && (
+            <div>
+              <button
+                className="flex items-center gap-1 text-xs text-primary hover:underline mb-1.5"
+                onClick={() => setShowCouponList((v) => !v)}
+              >
+                <ChevronDown className={`h-3 w-3 transition-transform ${showCouponList ? "rotate-180" : ""}`} />
+                {availableCoupons.length} coupon{availableCoupons.length !== 1 ? "s" : ""} available
+              </button>
+              {showCouponList && (
+                <div className="space-y-1.5 mb-2">
+                  {availableCoupons.map((c) => (
+                    <button
+                      key={c.id}
+                      className="w-full flex items-center justify-between rounded-lg border border-dashed border-primary/40 bg-primary/5 px-3 py-2 text-left hover:bg-primary/10 transition-colors"
+                      onClick={() => applyCoupon(c.code)}
+                    >
+                      <div>
+                        <span className="font-mono text-sm font-semibold text-primary">{c.code}</span>
+                        {c.min_order_amount && (
+                          <span className="text-xs text-muted-foreground ml-2">min ${c.min_order_amount.toFixed(2)}</span>
+                        )}
+                        {c.valid_until && (
+                          <span className="text-xs text-muted-foreground ml-2">expires {new Date(c.valid_until).toLocaleDateString()}</span>
+                        )}
+                      </div>
+                      <span className="text-xs font-semibold text-emerald-400">
+                        {c.discount_type === "percent" ? `${c.discount_value}% off` : `$${c.discount_value.toFixed(2)} off`}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {couponResult?.valid ? (
+            <div className="flex items-center justify-between rounded-lg bg-emerald-500/10 border border-emerald-500/30 px-3 py-2.5">
+              <div>
+                <p className="text-sm font-semibold text-emerald-400 font-mono">{couponInput}</p>
+                <p className="text-xs text-emerald-400/80">{couponResult.message}</p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 text-xs text-muted-foreground hover:text-destructive"
+                onClick={() => { setCouponInput(""); setCouponResult(null); }}
+              >
+                Remove
+              </Button>
+            </div>
+          ) : (
+            <>
+              <div className="flex gap-2">
+                <Input
+                  placeholder="e.g. SAVE10"
+                  value={couponInput}
+                  onChange={(e) => { setCouponInput(e.target.value.toUpperCase()); setCouponResult(null); }}
+                  className="h-9 text-sm font-mono"
+                  onKeyDown={(e) => e.key === "Enter" && applyCoupon()}
+                />
+                <Button variant="outline" size="sm" className="h-9 shrink-0" onClick={() => applyCoupon()} disabled={couponChecking || !couponInput.trim()}>
+                  {couponChecking ? "…" : "Apply"}
+                </Button>
+              </div>
+              {couponResult && !couponResult.valid && (
+                <div className="flex items-center gap-1.5 rounded-lg bg-destructive/10 border border-destructive/30 px-3 py-2">
+                  <p className="text-xs text-destructive">{couponResult.message}</p>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -561,9 +644,9 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </div>
         )}
 
-        {/* Order total breakdown */}
+        {/* Order total breakdown — always visible once any discount applies */}
         {(bulkDiscount > 0 || couponDiscount > 0 || loyaltyDiscount > 0) && (
-          <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1 text-sm">
+          <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1.5 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
               <span>${total.toFixed(2)}</span>
@@ -575,7 +658,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
               </div>
             )}
             {couponDiscount > 0 && (
-              <div className="flex justify-between text-emerald-400">
+              <div className="flex justify-between text-emerald-400 font-medium">
                 <span>Coupon ({couponInput})</span>
                 <span>−${couponDiscount.toFixed(2)}</span>
               </div>
@@ -586,9 +669,9 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
                 <span>−${loyaltyDiscount.toFixed(2)}</span>
               </div>
             )}
-            <div className="flex justify-between font-bold border-t border-border pt-1 mt-1">
+            <div className="flex justify-between font-bold text-base border-t border-border pt-2 mt-1">
               <span>Total</span>
-              <span>${finalTotal.toFixed(2)}</span>
+              <span className="text-primary">${finalTotal.toFixed(2)}</span>
             </div>
           </div>
         )}
