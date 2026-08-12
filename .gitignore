@@ -6,3 +6,14 @@ vite.config.ts.*
 *.tar.gz
 .env
 .env.*
+# Local Netlify folder
+.netlify
+
+# Capacitor / native platform build output (android/.gitignore covers the rest)
+ios/App/Pods
+ios/App/output
+
+# Playwright
+/test-results/
+/playwright-report/
+/playwright/.cache/
