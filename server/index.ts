@@ -56,9 +56,10 @@ app.use((req, res, next) => {
     serveStatic(app);
   }
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client
-  const port = 5000;
+  // Serves both the API and the client. Defaults to 5000; overridable via
+  // PORT so e.g. Playwright can run an isolated instance alongside a normal
+  // dev server (see playwright.config.ts).
+  const port = Number(process.env.PORT) || 5000;
   server.listen({
     port,
     host: "0.0.0.0",
