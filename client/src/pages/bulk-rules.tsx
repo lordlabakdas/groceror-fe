@@ -271,9 +271,10 @@ export default function BulkRulesPage() {
     queryKey: ["/bulk-rules"],
   });
 
-  const { data: inventory = [] } = useQuery<InventoryItem[]>({
-    queryKey: ["/inventory/"],
+  const { data } = useQuery<{ inventory: InventoryItem[] }>({
+    queryKey: ["/inventory/get-store-inventory"],
   });
+  const inventory = data?.inventory ?? [];
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/bulk-rules/${id}`),
