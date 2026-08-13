@@ -14,6 +14,10 @@ npm run db:push    # Push Drizzle schema changes to the database
 
 There is no test suite. `npm run check` is the only automated verification step.
 
+## Development Workflow
+
+Prefer a git worktree over editing directly in this checkout for any non-trivial change (new features, anything that leaves the app in a broken intermediate state across multiple commits). Create one on its own branch — e.g. `git worktree add ../groceror-fe-<feature> -b <feature-branch>` — do the work there, and merge/push to `main` once it's ready. Trivial one-off fixes (typos, single-line corrections) can still go straight to `main` in the main checkout.
+
 ## Environment
 
 Create a `.env` in the project root:
