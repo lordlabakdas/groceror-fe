@@ -5,14 +5,17 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Commands
 
 ```bash
-npm run dev        # Start dev server (Express + Vite HMR) on :5000
-npm run build      # Production build: Vite → dist/public, esbuild server → dist/index.js
-npm run start      # Serve the production build
-npm run check      # TypeScript type-check (no tests exist)
-npm run db:push    # Push Drizzle schema changes to the database
+npm run dev           # Start dev server (Express + Vite HMR) on :5000
+npm run build         # Production build: Vite → dist/public, esbuild server → dist/index.js
+npm run build:mobile  # Vite build only (skips the Express server bundling step) — used by Capacitor
+npm run start         # Serve the production build
+npm run check         # TypeScript type-check
+npm run test:e2e      # Playwright end-to-end tests (see Testing below)
+npm run cap:sync      # build:mobile + `cap sync` — refreshes the native Android project
+npm run db:push       # Push Drizzle schema changes to the database
 ```
 
-There is no test suite. `npm run check` is the only automated verification step.
+`npm run check` is the only *unit-level* verification step (there's no component/unit test suite) — but real end-to-end coverage exists via Playwright, see below.
 
 ## Development Workflow
 
@@ -35,12 +38,7 @@ This is a **React SPA frontend** for the [groceror](https://github.com/lordlabak
 
 ### Two-role system
 
-Users have one of two `entityType` values decoded from their JWT:
-
-- `"store"` — Store owners: access `/products`, `/inventory`, `/dashboard`, `/store-orders`
-- `"user"` — Buyers: access `/stores`, `/stores/:id`, `/search`, `/orders`
-
-Route guards in `App.tsx` (`StoreOwnerRoute`, `BuyerRoute`) enforce this via redirect. Auth state lives in `AuthContext` (`client/src/lib/auth-context.tsx`), which decodes the JWT client-side and exposes `user`, `login`, `logout`, and `openLogin`.
+Users have one of two `entityType` values decoded from their JWT: `"store"` (store owners) or `"user"` (buyers). Route guards in `App.tsx` (`StoreOwnerRoute`, `BuyerRoute`) enforce this per-route via redirect — see the Pages table in `README.md` for the full, current route-to-role mapping rather than relying on a list here, since routes get added faster than this file gets updated. Auth state lives in `AuthContext` (`client/src/lib/auth-context.tsx`), which decodes the JWT client-side and exposes `user`, `login`, `logout`, and `openLogin`.
 
 ### API communication
 
@@ -94,3 +92,11 @@ Inventory (store owners): `GET /inventory/get-store-inventory`, `POST /inventory
 Cart (buyers): `GET /cart/:storeId/items`, `POST /cart/:storeId/items`, `PATCH /cart/:storeId/items/:id`, `DELETE /cart/:storeId/items/:id`
 
 Orders: `POST /order/create-order`, `GET /order/:id/status`
+
+## Testing
+
+E2E tests live in `e2e/` (Playwright). `playwright.config.ts` spins up two isolated `webServer`s for the run: this frontend on a non-default port, and a backend instance via `scripts/run_e2e_server.py` (in the `groceror` repo, one directory up by default — see `E2E_BACKEND_DIR`) pointed at a throwaway SQLite file with Twilio disabled. Since the real `/user/otp` debug endpoint was removed for security, `e2e/helpers/otp.ts` reads OTPs straight out of that SQLite file — mirroring the backend's own `get_test_otp()` pytest helper — rather than expecting the OTP back over HTTP.
+
+## Mobile (Capacitor)
+
+`capacitor.config.ts` (`webDir: dist/public`) wraps this same web build as a native Android app — same codebase, same API calls over `VITE_API_URL`, no separate mobile-specific logic beyond what's genuinely platform-specific. The `android/` native project is checked into this repo. `npm run build:mobile` builds the client only (skips the Express/esbuild step, which mobile doesn't need); `npm run cap:sync` rebuilds and copies the output into `android/`. Building/running requires Android Studio + the Android SDK locally, neither of which this repo's own tooling provides. iOS hasn't been scaffolded (`npx cap add ios` needs a Mac with Xcode + CocoaPods).
