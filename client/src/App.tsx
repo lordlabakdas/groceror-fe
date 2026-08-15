@@ -3,6 +3,7 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { CartProvider } from "./lib/cart";
+import { ThemeProvider } from "./lib/theme-context";
 import { AuthProvider, useAuth } from "./lib/auth-context";
 import { AuthDialog } from "./components/auth-dialog";
 import { Layout } from "./components/layout";
@@ -93,17 +94,19 @@ function AuthDialogBridge() {
 
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
-      <AuthProvider>
-        <CartProvider>
-          <Layout>
-            <Router />
-          </Layout>
-          <Toaster />
-          <AuthDialogBridge />
-        </CartProvider>
-      </AuthProvider>
-    </QueryClientProvider>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
+        <AuthProvider>
+          <CartProvider>
+            <Layout>
+              <Router />
+            </Layout>
+            <Toaster />
+            <AuthDialogBridge />
+          </CartProvider>
+        </AuthProvider>
+      </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

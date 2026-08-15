@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Search, MapPin, Globe, Map, List, Star, Navigation, Sparkles, Flame } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
+import { useTheme } from "@/lib/theme-context";
 
 interface FeaturedStore {
   store_id: string;
@@ -445,15 +446,16 @@ function MapView({
   hideUnmappableList = false,
 }: MapViewProps) {
   const unmappable = stores.filter((s) => s.latitude == null || s.longitude == null);
+  const { theme } = useTheme();
 
   return (
     <div className="groceror-map relative h-full flex flex-col" style={{ isolation: "isolate" }}>
-      {/* ambient amber glow, echoing the hero section's radial glow */}
+      {/* ambient glow in the primary hue, echoing the hero section's radial glow */}
       <div
         className="pointer-events-none absolute -inset-6 z-0 opacity-60"
         style={{
           background:
-            "radial-gradient(ellipse 60% 50% at 50% 0%, hsla(38,92%,50%,0.16) 0%, transparent 70%)",
+            "radial-gradient(ellipse 60% 50% at 50% 0%, hsl(var(--primary) / 0.16) 0%, transparent 70%)",
         }}
       />
       <MapContainer
@@ -464,8 +466,9 @@ function MapView({
       >
         <FitBounds mappable={mappable} />
         <TileLayer
+          key={theme}
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          url={`https://{s}.basemaps.cartocdn.com/${theme === "dark" ? "dark_all" : "light_all"}/{z}/{x}/{y}{r}.png`}
         />
         {/* soft vignette so the map's edges blend into the dark UI */}
         <div className="groceror-map-vignette pointer-events-none absolute inset-0 z-[400]" />
