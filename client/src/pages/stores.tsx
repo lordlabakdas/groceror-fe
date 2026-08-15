@@ -70,27 +70,51 @@ interface StoreItem {
 
 type ViewMode = "map" | "list";
 
-// ── Custom emerald map marker ─────────────────────────────────────────────────
+// ── Lantern-pin map marker ──────────────────────────────────────────────────
+// A warm amber pin with a soft glow, echoing the "night-market" palette
+// (deep navy map + amber lantern light) instead of a generic map-pin color.
 
 function createMarkerIcon(isActive: boolean): L.DivIcon {
-  const size = isActive ? 16 : 11;
-  const glow = isActive
-    ? "box-shadow:0 0 0 4px rgba(34,197,94,0.25),0 0 14px rgba(34,197,94,0.65);"
-    : "box-shadow:0 2px 6px rgba(0,0,0,0.6);";
+  const pinH = isActive ? 34 : 26;
+  const pinW = Math.round(pinH * 0.78);
+  const glowSize = isActive ? pinH * 1.8 : pinH * 1.3;
+  const glowOpacity = isActive ? 0.55 : 0.3;
+  const totalH = pinH + 10;
+
   return L.divIcon({
-    className: "",
-    html: `<div style="
-      width:${size}px;
-      height:${size}px;
-      background:#22c55e;
-      border:2px solid rgba(255,255,255,0.9);
-      border-radius:50%;
-      ${glow}
-      transition:all 0.15s ease;
-    "></div>`,
-    iconSize: [size, size],
-    iconAnchor: [size / 2, size / 2],
-    popupAnchor: [0, -(size / 2 + 6)],
+    className: "groceror-marker",
+    html: `
+      <div style="position:relative;width:${pinW}px;height:${totalH}px;">
+        <div style="
+          position:absolute;
+          left:50%; top:${pinH * 0.42}px;
+          width:${glowSize}px; height:${glowSize}px;
+          transform:translate(-50%,-50%);
+          background:radial-gradient(circle, hsla(38,92%,50%,${glowOpacity}) 0%, transparent 72%);
+          pointer-events:none;
+        "></div>
+        <svg
+          width="${pinW}" height="${pinH}" viewBox="0 0 24 32"
+          style="
+            position:relative;
+            filter:drop-shadow(0 2px 5px rgba(0,0,0,0.55));
+            transition:transform 0.15s ease;
+            transform:scale(${isActive ? 1.08 : 1});
+            transform-origin:50% 100%;
+          "
+        >
+          <path
+            d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z"
+            fill="hsl(38 92% 50%)"
+            stroke="hsl(224 47% 8%)"
+            stroke-width="1.5"
+          />
+          <circle cx="12" cy="12" r="4.5" fill="hsl(224 47% 8%)" />
+        </svg>
+      </div>`,
+    iconSize: [pinW, totalH],
+    iconAnchor: [pinW / 2, pinH],
+    popupAnchor: [0, -(pinH + 4)],
   });
 }
 
@@ -423,7 +447,15 @@ function MapView({
   const unmappable = stores.filter((s) => s.latitude == null || s.longitude == null);
 
   return (
-    <div className="h-full flex flex-col" style={{ isolation: "isolate" }}>
+    <div className="groceror-map relative h-full flex flex-col" style={{ isolation: "isolate" }}>
+      {/* ambient amber glow, echoing the hero section's radial glow */}
+      <div
+        className="pointer-events-none absolute -inset-6 z-0 opacity-60"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 50% 0%, hsla(38,92%,50%,0.16) 0%, transparent 70%)",
+        }}
+      />
       <MapContainer
         center={FALLBACK_CENTRE}
         zoom={FALLBACK_ZOOM}
@@ -433,8 +465,10 @@ function MapView({
         <FitBounds mappable={mappable} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
-          url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
+          url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
         />
+        {/* soft vignette so the map's edges blend into the dark UI */}
+        <div className="groceror-map-vignette pointer-events-none absolute inset-0 z-[400]" />
         {mappable.map((store) => (
           <Marker
             key={store.id}
@@ -453,10 +487,10 @@ function MapView({
                 )}
                 <span
                   className={cn(
-                    "inline-block text-xs px-2 py-0.5 rounded-full",
+                    "inline-block text-xs px-2 py-0.5 rounded-full border",
                     store.is_active
-                      ? "bg-emerald-500/20 text-amber-400"
-                      : "bg-muted text-muted-foreground"
+                      ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
+                      : "bg-muted text-muted-foreground border-border"
                   )}
                 >
                   {store.is_active ? "Open" : "Closed"}
