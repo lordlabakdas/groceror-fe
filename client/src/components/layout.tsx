@@ -1,10 +1,11 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap } from "lucide-react";
+import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap, Sun, Moon } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 import { ProfileSheet } from "@/components/profile-sheet";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useOrderAlerts } from "@/hooks/use-order-alerts";
@@ -25,6 +26,7 @@ function navCls(href: string, current: string, mobile = false) {
 export function Layout({ children }: { children: React.ReactNode }) {
   const { state, cartOpen, openCart, closeCart } = useCart();
   const { user, openLogin, profileOpen, setProfileOpen } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [location] = useLocation();
 
@@ -125,7 +127,15 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   </nav>
                 )}
 
-                <div className="absolute bottom-8 left-4 right-4">
+                <div className="absolute bottom-8 left-4 right-4 flex flex-col gap-2">
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={toggleTheme}
+                  >
+                    {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+                    {theme === "dark" ? "Light mode" : "Dark mode"}
+                  </Button>
                   {user ? (
                     <Button
                       variant="outline"
@@ -193,8 +203,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
             )}
           </div>
 
-          {/* ---- right: auth + cart ---- */}
+          {/* ---- right: theme + auth + cart ---- */}
           <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+
             {user ? (
               /* logged-in: 3-bar profile button */
               <Button

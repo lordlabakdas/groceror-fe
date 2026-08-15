@@ -7,6 +7,13 @@
     <meta name="description" content="Groceror is the all-in-one platform for grocers and shoppers — manage inventory, browse fresh products, and check out in seconds." />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script>
+      (function () {
+        var stored = localStorage.getItem("groceror_theme");
+        var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.classList.toggle("dark", dark);
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

@@ -2,8 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Night-market palette — deep navy + warm amber */
+/* Produce Crate palette — warm paper cream + terracotta (default, light) */
 :root {
+  --background: 40 45% 94%;
+  --foreground: 33 15% 15%;
+  --card: 40 100% 98%;
+  --card-foreground: 33 15% 15%;
+  --popover: 40 100% 98%;
+  --popover-foreground: 33 15% 15%;
+  --primary: 21 63% 47%;
+  --primary-foreground: 35 100% 98%;
+  --secondary: 46 40% 86%;
+  --secondary-foreground: 93 16% 25%;
+  --muted: 42 42% 89%;
+  --muted-foreground: 37 10% 49%;
+  --accent: 47 37% 83%;
+  --accent-foreground: 93 16% 25%;
+  --destructive: 4 61% 52%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 40 36% 84%;
+  --input: 42 42% 89%;
+  --ring: 21 63% 47%;
+  --radius: 0.5rem;
+  --chart-1: 21 63% 47%;
+  --chart-2: 97 16% 37%;
+  --chart-3: 39 67% 55%;
+  --chart-4: 11 56% 42%;
+  --chart-5: 37 10% 49%;
+  --sidebar-background: 41 44% 89%;
+  --sidebar-foreground: 33 15% 15%;
+  --sidebar-primary: 21 63% 47%;
+  --sidebar-primary-foreground: 35 100% 98%;
+  --sidebar-accent: 47 37% 83%;
+  --sidebar-accent-foreground: 93 16% 25%;
+  --sidebar-border: 40 36% 84%;
+  --sidebar-ring: 21 63% 47%;
+}
+
+/* Night-market palette — deep navy + warm amber (dark mode) */
+.dark {
   --background: 224 47% 8%;
   --foreground: 38 55% 94%;
   --card: 224 38% 12%;
@@ -23,7 +60,6 @@
   --border: 224 28% 20%;
   --input: 224 32% 15%;
   --ring: 38 92% 50%;
-  --radius: 0.5rem;
   --chart-1: 38 92% 50%;
   --chart-2: 38 80% 68%;
   --chart-3: 224 28% 28%;
@@ -56,7 +92,7 @@
 
 /* ── Card highlight flash when map marker is clicked ─ */
 @keyframes card-flash {
-  0%   { background-color: hsl(38 92% 50% / 0.15); }
+  0%   { background-color: hsl(var(--primary) / 0.15); }
   100% { background-color: transparent; }
 }
 .card-flash {
@@ -84,12 +120,13 @@
   margin: 12px 14px !important;
 }
 
-/* ── Store map: dark "night-market" theme ──────────── */
+/* ── Store map ────────────────────────────────────── */
 
-/* Nudge CARTO's neutral dark basemap toward the app's navy hue so the map
-   reads as part of the same world as the surrounding UI, not a separate
-   dark-gray widget. */
-.groceror-map .leaflet-tile-pane {
+/* Dark mode: nudge CARTO's neutral dark basemap toward the app's navy hue
+   so the map reads as part of the same world as the surrounding UI, not a
+   separate dark-gray widget. Light mode uses CARTO's light tiles as-is —
+   they're already close to the Produce Crate cream. */
+.dark .groceror-map .leaflet-tile-pane {
   filter: saturate(0.75) brightness(0.92) hue-rotate(6deg);
 }
 
