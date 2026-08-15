@@ -1,7 +1,7 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { MapContainer, TileLayer, Marker, Popup } from "react-leaflet";
+import { MapContainer, TileLayer, Marker, Popup, useMap } from "react-leaflet";
 import L from "leaflet";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -204,16 +204,6 @@ export default function Stores() {
 
   const mappable = filtered.filter((s) => s.latitude != null && s.longitude != null);
 
-  const centre =
-    mappable.length > 0
-      ? ([
-          mappable.reduce((sum, s) => sum + s.latitude!, 0) / mappable.length,
-          mappable.reduce((sum, s) => sum + s.longitude!, 0) / mappable.length,
-        ] as [number, number])
-      : ([20, 0] as [number, number]);
-
-  const zoom = mappable.length > 0 ? 5 : 2;
-
   function handleMarkerClick(id: string) {
     setHoveredStoreId(id);
     const el = cardRefs.current[id];
@@ -227,8 +217,6 @@ export default function Stores() {
   const sharedMapProps = {
     stores: filtered,
     mappable,
-    centre,
-    zoom,
     activeStoreId: hoveredStoreId,
     onMarkerClick: handleMarkerClick,
   };
@@ -390,18 +378,44 @@ export default function Stores() {
 interface MapViewProps {
   stores: StoreItem[];
   mappable: StoreItem[];
-  centre: [number, number];
-  zoom: number;
   activeStoreId: string | null;
   onMarkerClick: (id: string) => void;
   hideUnmappableList?: boolean;
 }
 
+// World-view fallback used only until FitBounds positions the map (or when
+// there's nothing mappable yet). Real positioning always comes from bounds
+// fitted to the actual markers, never a raw average of their coordinates —
+// stores spread across continents would otherwise average out to open ocean.
+const FALLBACK_CENTRE: [number, number] = [20, 0];
+const FALLBACK_ZOOM = 2;
+
+// Refits the map to the current markers whenever the set of mappable stores
+// changes (search, "near me" filter, etc.) without fighting the user's
+// manual pan/zoom on unrelated re-renders (e.g. hovering a card).
+function FitBounds({ mappable }: { mappable: StoreItem[] }) {
+  const map = useMap();
+  const boundsKey = mappable.map((s) => s.id).sort().join(",");
+
+  useEffect(() => {
+    if (mappable.length === 0) return;
+    if (mappable.length === 1) {
+      map.setView([mappable[0].latitude!, mappable[0].longitude!], 13);
+      return;
+    }
+    const bounds = L.latLngBounds(
+      mappable.map((s) => [s.latitude!, s.longitude!] as [number, number])
+    );
+    map.fitBounds(bounds, { padding: [40, 40], maxZoom: 13 });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [map, boundsKey]);
+
+  return null;
+}
+
 function MapView({
   stores,
   mappable,
-  centre,
-  zoom,
   activeStoreId,
   onMarkerClick,
   hideUnmappableList = false,
@@ -411,11 +425,12 @@ function MapView({
   return (
     <div className="h-full flex flex-col" style={{ isolation: "isolate" }}>
       <MapContainer
-        center={centre}
-        zoom={zoom}
+        center={FALLBACK_CENTRE}
+        zoom={FALLBACK_ZOOM}
         style={{ flex: 1, minHeight: 0 }}
         scrollWheelZoom
       >
+        <FitBounds mappable={mappable} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
           url="https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png"
