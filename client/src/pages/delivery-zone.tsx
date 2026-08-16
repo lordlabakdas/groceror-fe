@@ -122,49 +122,31 @@ function FeaturedStoreCard() {
   );
 }
 
-// Infer the store_id from the zone response — used to fetch it for the current store.
-// The endpoint GET /delivery-zones/store/{store_id} requires knowing your own store_id.
-// We get it from the zone response after PUT (which always belongs to the current store).
-
 export default function DeliveryZonePage() {
   const qc = useQueryClient();
   const { toast } = useToast();
 
-  // We don't have a "my store id" endpoint directly, so we use the PUT to upsert
-  // and list the zone. For the initial fetch, we rely on the PUT response to seed the state.
   const [form, setForm] = useState({ latitude: "", longitude: "", radius_km: "" });
   const [locating, setLocating] = useState(false);
 
-  // We query the zone by posting PUT and reflecting — but for display we store locally.
-  // Better: fetch via a store-profile endpoint. For now we store the zone in a local state
-  // seeded from the upsert response.
   const [zone, setZone] = useState<DeliveryZone | null>(null);
   const [fetched, setFetched] = useState(false);
 
-  // Try to load the zone by hitting the /user-profile or detecting store_id from previous queries.
-  // Simplest: call PUT with empty to check — but that would overwrite. Instead, expose a fetch
-  // from the store profile available in the auth context. For now use a dedicated fetch via
-  // /delivery-zones/store/{store_id} — but we need the store_id.
-  // We'll load via a side-effect that fetches the current user's store profile then fetches zone.
+  // Load the current store's zone, if any, via the self-scoped endpoint —
+  // no need to resolve our own store_id first.
   useEffect(() => {
-    // Fetch current store profile to get store_id, then fetch zone
-    apiRequest("GET", "/user/profile")
+    apiRequest("GET", "/delivery-zones/me")
       .then((r) => r.json())
-      .then((profile: { store_id?: string }) => {
-        if (!profile.store_id) { setFetched(true); return; }
-        return apiRequest("GET", `/delivery-zones/store/${profile.store_id}`)
-          .then((r) => r.json())
-          .then((z: DeliveryZone | null) => {
-            if (z && z.id) {
-              setZone(z);
-              setForm({
-                latitude: String(z.latitude),
-                longitude: String(z.longitude),
-                radius_km: String(z.radius_km),
-              });
-            }
-            setFetched(true);
+      .then((z: DeliveryZone | null) => {
+        if (z && z.id) {
+          setZone(z);
+          setForm({
+            latitude: String(z.latitude),
+            longitude: String(z.longitude),
+            radius_km: String(z.radius_km),
           });
+        }
+        setFetched(true);
       })
       .catch(() => setFetched(true));
   }, []);
