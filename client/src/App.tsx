@@ -32,20 +32,20 @@ import BackInStockPage from "@/pages/back-in-stock";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
-  return user ? <Component /> : <Redirect to="/" />;
+  return user ? <Component /> : <Redirect to="/" replace />;
 }
 
 function StoreOwnerRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
-  if (!user) return <Redirect to="/" />;
-  if (user.entityType !== "store") return <Redirect to="/stores" />;
+  if (!user) return <Redirect to="/" replace />;
+  if (user.entityType !== "store") return <Redirect to="/stores" replace />;
   return <Component />;
 }
 
 function BuyerRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
-  if (!user) return <Redirect to="/" />;
-  if (user.entityType !== "user") return <Redirect to="/products" />;
+  if (!user) return <Redirect to="/" replace />;
+  if (user.entityType !== "user") return <Redirect to="/products" replace />;
   return <Component />;
 }
 
