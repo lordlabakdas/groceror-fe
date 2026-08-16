@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock, ChevronDown } from "lucide-react";
-import { Sheet, SheetContent } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -160,7 +160,11 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 
   return (
     <Sheet open={open} onOpenChange={(o) => { if (!o) handleClose(); }}>
-      <SheetContent side="right" className="w-full sm:w-96 p-0 flex flex-col [&>button]:hidden">
+      <SheetContent
+        side="right"
+        className="w-full sm:w-96 p-0 flex flex-col [&>button]:hidden"
+        aria-describedby={undefined}
+      >
         {drawerState === "cart" && (
           <CartView
             items={items}
@@ -220,7 +224,7 @@ function CartView({
     <>
       <div className="bg-card border-b border-border px-4 py-4 flex items-start justify-between shrink-0">
         <div>
-          <h2 className="text-white text-lg font-semibold leading-tight">Your Cart</h2>
+          <SheetTitle className="text-white text-lg font-semibold leading-tight">Your Cart</SheetTitle>
           {storeName && <p className="text-muted-foreground text-sm mt-0.5">{storeName}</p>}
         </div>
         <div className="flex items-center gap-1">
@@ -499,7 +503,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
             <ArrowLeft className="h-4 w-4" />
           </Button>
           <div>
-            <h2 className="text-white text-lg font-semibold leading-tight">Checkout</h2>
+            <SheetTitle className="text-white text-lg font-semibold leading-tight">Checkout</SheetTitle>
             {storeName && <p className="text-muted-foreground text-sm mt-0.5">{storeName} · Pickup</p>}
           </div>
         </div>
@@ -791,7 +795,7 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
   return (
     <>
       <div className="bg-card border-b border-border px-4 py-4 text-center flex-shrink-0">
-        <h2 className="font-bold text-base">Order Confirmed</h2>
+        <SheetTitle className="font-bold text-base">Order Confirmed</SheetTitle>
       </div>
       <div className="flex-1 overflow-y-auto px-6 py-8 flex flex-col items-center text-center gap-4">
         <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary/20 to-primary/40 flex items-center justify-center shadow-lg animate-bounce">
