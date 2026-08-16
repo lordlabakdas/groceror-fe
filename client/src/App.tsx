@@ -45,7 +45,7 @@ function StoreOwnerRoute({ component: Component }: { component: () => JSX.Elemen
 function BuyerRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
   if (!user) return <Redirect to="/" replace />;
-  if (user.entityType !== "user") return <Redirect to="/products" replace />;
+  if (user.entityType !== "user") return <Redirect to="/dashboard" replace />;
   return <Component />;
 }
 

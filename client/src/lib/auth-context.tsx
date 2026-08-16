@@ -75,7 +75,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(token);
     const decoded = decodeToken(token);
     setUser(decoded);
-    setLocation(decoded?.entityType === "store" ? "/inventory" : "/stores");
+    setLocation(decoded?.entityType === "store" ? "/dashboard" : "/stores");
   }, [setLocation]);
 
   const logout = useCallback(() => {

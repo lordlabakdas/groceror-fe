@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useLocation } from "wouter";
 import { AlertCircle } from "lucide-react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
@@ -9,7 +8,7 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { PasswordStrength } from "./password-strength";
 import { InputOTP, InputOTPGroup, InputOTPSlot } from "@/components/ui/input-otp";
 import { apiRequest } from "@/lib/queryClient";
-import { useAuth, decodeToken } from "@/lib/auth-context";
+import { useAuth } from "@/lib/auth-context";
 import { useToast } from "@/hooks/use-toast";
 import { friendlyError } from "@/lib/errors";
 
@@ -56,7 +55,6 @@ const TITLES: Record<AuthView, string> = {
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", defaultEntityType = "user" }: AuthDialogProps) {
   const { toast } = useToast();
   const { login } = useAuth();
-  const [, setLocation] = useLocation();
 
   const [view, setView] = useState<AuthView>(
     defaultTab === "register" ? "register_phone" : "login",
@@ -99,8 +97,6 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       login(data.token);
       toast({ title: "Logged in", description: "Welcome back!" });
       resetAndClose();
-      const decoded = decodeToken(data.token);
-      setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
     } catch (err) {
       setFormError(friendlyError(err));
     } finally {
@@ -165,8 +161,6 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
       }
       toast({ title: "Account created!", description: "You're now logged in." });
       resetAndClose();
-      const decoded = decodeToken(token);
-      setLocation(decoded?.entityType === "store" ? "/products" : "/stores");
     } catch (err) {
       setFormError(friendlyError(err));
     } finally {
