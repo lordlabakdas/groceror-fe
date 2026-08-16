@@ -162,8 +162,8 @@ export function Layout({ children }: { children: React.ReactNode }) {
             </Sheet>
 
             {/* logo */}
-            <Link href="/">
-              <a href={user ? (user.entityType === "store" ? "/products" : "/stores") : "/"} className="text-xl font-bold tracking-tight text-primary">groceror</a>
+            <Link href={user ? (user.entityType === "store" ? "/dashboard" : "/stores") : "/"}>
+              <a className="text-xl font-bold tracking-tight text-primary">groceror</a>
             </Link>
 
             {/* desktop nav links — role-based */}
