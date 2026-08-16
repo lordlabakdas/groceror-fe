@@ -26,7 +26,7 @@ const _nameToImage = new Map<string, string>([
   ["sourdough bread", "https://images.unsplash.com/photo-1509440159596-0249088772ff?w=400&fit=crop"],
   ["croissants", "https://images.unsplash.com/photo-1555507036-ab1f4038808a?w=400&fit=crop"],
   ["whole milk", "https://images.unsplash.com/photo-1563636619-e9143da7973b?w=400&fit=crop"],
-  ["cheddar cheese", "https://images.unsplash.com/photo-1618164435226-9e8e7ccfade7?w=400&fit=crop"],
+  ["cheddar cheese", "https://images.unsplash.com/photo-1683314573422-649a3c6ad784?w=400&fit=crop"],
   ["greek yogurt", "https://images.unsplash.com/photo-1488477181946-6428a0291777?w=400&fit=crop"],
   ["chicken breast", "https://images.unsplash.com/photo-1604503468506-a8da13d82791?w=400&fit=crop"],
   ["salmon fillet", "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?w=400&fit=crop"],
