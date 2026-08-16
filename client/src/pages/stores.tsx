@@ -72,8 +72,9 @@ interface StoreItem {
 type ViewMode = "map" | "list";
 
 // ── Lantern-pin map marker ──────────────────────────────────────────────────
-// A warm amber pin with a soft glow, echoing the "night-market" palette
-// (deep navy map + amber lantern light) instead of a generic map-pin color.
+// A pin in the app's primary accent with a soft glow — echoes whichever
+// theme is active (amber "night-market" in dark mode, terracotta "produce
+// crate" in light mode) via CSS variables, rather than a fixed color.
 
 function createMarkerIcon(isActive: boolean): L.DivIcon {
   const pinH = isActive ? 34 : 26;
@@ -91,7 +92,7 @@ function createMarkerIcon(isActive: boolean): L.DivIcon {
           left:50%; top:${pinH * 0.42}px;
           width:${glowSize}px; height:${glowSize}px;
           transform:translate(-50%,-50%);
-          background:radial-gradient(circle, hsla(38,92%,50%,${glowOpacity}) 0%, transparent 72%);
+          background:radial-gradient(circle, hsl(var(--primary) / ${glowOpacity}) 0%, transparent 72%);
           pointer-events:none;
         "></div>
         <svg
@@ -106,11 +107,11 @@ function createMarkerIcon(isActive: boolean): L.DivIcon {
         >
           <path
             d="M12 0C5.4 0 0 5.4 0 12c0 9 12 20 12 20s12-11 12-20c0-6.6-5.4-12-12-12z"
-            fill="hsl(38 92% 50%)"
-            stroke="hsl(224 47% 8%)"
+            fill="hsl(var(--primary))"
+            stroke="hsl(var(--background))"
             stroke-width="1.5"
           />
-          <circle cx="12" cy="12" r="4.5" fill="hsl(224 47% 8%)" />
+          <circle cx="12" cy="12" r="4.5" fill="hsl(var(--background))" />
         </svg>
       </div>`,
     iconSize: [pinW, totalH],
