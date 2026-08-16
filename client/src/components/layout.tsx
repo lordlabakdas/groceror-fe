@@ -49,7 +49,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
           {/* ---- left: hamburger + logo + nav ---- */}
           <div className="flex items-center gap-4">
-            {/* mobile hamburger */}
+            {/* mobile hamburger — only meaningful once there's role-based nav to show;
+                logged-out visitors use the Login button on the right, same as desktop */}
+            {user && (
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
               <SheetTrigger asChild>
                 <Button variant="ghost" size="icon" className="md:hidden">
@@ -136,26 +138,18 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
                     {theme === "dark" ? "Light mode" : "Dark mode"}
                   </Button>
-                  {user ? (
-                    <Button
-                      variant="outline"
-                      className="w-full gap-2"
-                      onClick={() => { setDrawerOpen(false); setProfileOpen(true); }}
-                    >
-                      <User className="h-4 w-4" />
-                      My Profile
-                    </Button>
-                  ) : (
-                    <Button
-                      className="w-full"
-                      onClick={() => { setDrawerOpen(false); openLogin("login"); }}
-                    >
-                      Login
-                    </Button>
-                  )}
+                  <Button
+                    variant="outline"
+                    className="w-full gap-2"
+                    onClick={() => { setDrawerOpen(false); setProfileOpen(true); }}
+                  >
+                    <User className="h-4 w-4" />
+                    My Profile
+                  </Button>
                 </div>
               </SheetContent>
             </Sheet>
+            )}
 
             {/* logo */}
             <Link href="/">
