@@ -21,7 +21,7 @@ const FEATURES = [
     icon: <Smartphone className="h-7 w-7" />,
     title: "Phone-first Auth",
     description:
-      "No emails, no hassle. Register and log in with just your phone number and a one-time code.",
+      "No emails, no hassle. Verify your phone with a one-time code at sign-up, then log in anytime with your password.",
   },
 ];
 
@@ -152,7 +152,7 @@ export default function Home() {
             <span className="text-amber-400">✓</span> No credit card required
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="text-amber-400">✓</span> Phone OTP login
+            <span className="text-amber-400">✓</span> Fast phone sign-up
           </span>
           <span className="flex items-center gap-1.5">
             <span className="text-amber-400">✓</span> Free to use
