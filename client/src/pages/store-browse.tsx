@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { type GetStoreInventoryResponse, type Product } from "@/types/models";
 import { getProductImage } from "@/lib/catalog";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/currency";
 
 interface StoreDetail {
   id: string;
@@ -565,12 +566,12 @@ function ProductCard({ product, cartQuantity, onAdd, onIncrement, onDecrement, o
           {effectivePrice != null ? (
             <div className="flex items-baseline gap-1.5 mt-0.5">
               <span className={cn("text-base font-bold", product.flashSalePrice != null ? "text-amber-400" : "text-rose-400")}>
-                ${effectivePrice.toFixed(2)}
+                {formatPrice(effectivePrice)}
               </span>
-              <span className="text-xs line-through text-muted-foreground">${product.price}</span>
+              <span className="text-xs line-through text-muted-foreground">{formatPrice(Number(product.price))}</span>
             </div>
           ) : (
-            <p className="text-base font-bold text-primary mt-0.5">${product.price}</p>
+            <p className="text-base font-bold text-primary mt-0.5">{formatPrice(Number(product.price))}</p>
           )}
         </div>
         {cartQuantity > 0 ? (
@@ -690,11 +691,11 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
             <div>
               {product.salePrice != null ? (
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-rose-400">${product.salePrice.toFixed(2)}</span>
-                  <span className="text-base line-through text-muted-foreground">${product.price}</span>
+                  <span className="text-2xl font-bold text-rose-400">{formatPrice(Number(product.salePrice))}</span>
+                  <span className="text-base line-through text-muted-foreground">{formatPrice(Number(product.price))}</span>
                 </div>
               ) : (
-                <span className="text-2xl font-bold text-primary">${product.price}</span>
+                <span className="text-2xl font-bold text-primary">{formatPrice(Number(product.price))}</span>
               )}
             </div>
             <span className="text-sm text-muted-foreground">

@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/currency";
 
 interface PriceAlert {
   id: string;
@@ -41,12 +42,12 @@ function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: strin
       <div className="flex-1 min-w-0">
         <p className="font-medium text-sm truncate">{alert.inventory_name}</p>
         <p className="text-xs text-muted-foreground mt-0.5">
-          Target: <span className="font-semibold text-foreground">${alert.target_price.toFixed(2)}</span>
+          Target: <span className="font-semibold text-foreground">{formatPrice(alert.target_price)}</span>
           <span className="mx-1.5">·</span>
-          Now: <span className="font-semibold text-foreground">${alert.current_price.toFixed(2)}</span>
+          Now: <span className="font-semibold text-foreground">{formatPrice(alert.current_price)}</span>
           {savings > 0 && (
             <span className="ml-1.5 text-green-500 font-medium">
-              (save ${savings.toFixed(2)})
+              (save {formatPrice(savings)})
             </span>
           )}
         </p>
@@ -127,7 +128,7 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
             />
           </div>
           <div className="space-y-1.5">
-            <Label>Target price ($)</Label>
+            <Label>Target price (₹)</Label>
             <Input
               type="number"
               step="0.01"

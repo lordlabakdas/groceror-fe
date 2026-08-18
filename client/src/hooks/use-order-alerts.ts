@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/currency";
 
 interface StoreOrder {
   id: string;
@@ -84,7 +85,7 @@ export function useOrderAlerts(enabled: boolean) {
       newOrders.length === 1
         ? "New order received"
         : `${newOrders.length} new orders received`;
-    const description = `$${total.toFixed(2)} — open Orders to accept.`;
+    const description = `${formatPrice(total)} — open Orders to accept.`;
 
     toast({ title, description });
 

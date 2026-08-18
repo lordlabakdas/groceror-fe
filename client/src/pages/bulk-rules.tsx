@@ -21,6 +21,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/currency";
 
 interface BulkRule {
   id: string;
@@ -76,7 +77,7 @@ function RuleCard({ rule, onDelete }: { rule: BulkRule; onDelete: () => void }) 
           <p className="text-xs text-muted-foreground">
             Buy bundle → {rule.discount_type === "percent"
               ? `${rule.discount_value}% off`
-              : `$${rule.discount_value?.toFixed(2)} off`}
+              : `${formatPrice(rule.discount_value ?? 0)} off`}
             <br />
             <span className="text-foreground font-medium">
               {rule.bundle_items.map((b) => b.name).join(", ")}
@@ -139,7 +140,7 @@ function BXGFForm({
           <SelectTrigger><SelectValue placeholder="Select item" /></SelectTrigger>
           <SelectContent>
             {inventory.map((i) => (
-              <SelectItem key={i.id} value={i.id}>{i.name} (${i.price.toFixed(2)})</SelectItem>
+              <SelectItem key={i.id} value={i.id}>{i.name} ({formatPrice(i.price)})</SelectItem>
             ))}
           </SelectContent>
         </Select>
@@ -222,7 +223,7 @@ function BundleForm({
                 className="accent-primary"
               />
               <span className="text-sm flex-1">{item.name}</span>
-              <span className="text-xs text-muted-foreground">${item.price.toFixed(2)}</span>
+              <span className="text-xs text-muted-foreground">{formatPrice(item.price)}</span>
             </label>
           ))}
         </div>
@@ -235,7 +236,7 @@ function BundleForm({
             <SelectTrigger><SelectValue /></SelectTrigger>
             <SelectContent>
               <SelectItem value="percent">Percent (%)</SelectItem>
-              <SelectItem value="fixed">Fixed ($)</SelectItem>
+              <SelectItem value="fixed">Fixed (₹)</SelectItem>
             </SelectContent>
           </Select>
         </div>

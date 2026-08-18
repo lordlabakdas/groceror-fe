@@ -4,6 +4,7 @@ export interface GrocerorInventoryItem {
   id: string;          // UUID
   name: string;
   quantity: number;
+  unit: "UNIT" | "G" | "KG";
   category: string;    // "GROCERY" | "PRODUCE" | "MEAT" | "DAIRY" | "BAKERY" | "OTHER"
   price: number;
   store_id: string;    // UUID — needed as the URL segment for cart operations

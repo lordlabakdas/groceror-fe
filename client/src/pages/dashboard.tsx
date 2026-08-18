@@ -17,6 +17,7 @@ import {
   OrdersByStatusChart,
   RevenueTrendChart,
 } from "@/components/dashboard-charts";
+import { formatPrice } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -202,7 +203,7 @@ export default function Dashboard() {
         <KpiCard label="Orders Today" value={data.todays_summary.order_count} color="green" />
         <KpiCard
           label="Revenue Today"
-          value={`$${data.todays_summary.revenue.toFixed(2)}`}
+          value={formatPrice(data.todays_summary.revenue)}
           color="green"
         />
         <KpiCard label="Expiring Soon" value={data.expiring_soon.length} color="amber" />
@@ -269,7 +270,7 @@ export default function Dashboard() {
                   </span>
                 </div>
                 <span className="font-semibold text-primary">
-                  ${order.total_price.toFixed(2)}
+                  {formatPrice(order.total_price)}
                 </span>
               </div>
             ))
@@ -366,7 +367,7 @@ export default function Dashboard() {
                   <span className="text-muted-foreground text-xs">×{item.units_sold}</span>
                 </div>
                 <span className="font-semibold text-purple-400">
-                  ${item.revenue.toFixed(2)}
+                  {formatPrice(item.revenue)}
                 </span>
               </div>
             ))

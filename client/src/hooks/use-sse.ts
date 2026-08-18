@@ -3,6 +3,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/lib/auth-context";
 import { getAuthToken } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/currency";
 
 const BASE_URL = import.meta.env.VITE_API_URL || "";
 
@@ -53,7 +54,7 @@ export function useSSE() {
         queryClient.invalidateQueries({ queryKey: ["/order/store-orders"] });
         toast({
           title: "New order received",
-          description: `$${data.total_price.toFixed(2)} order just came in.`,
+          description: `${formatPrice(data.total_price)} order just came in.`,
         });
       });
 

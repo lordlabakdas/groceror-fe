@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/currency";
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger,
 } from "@/components/ui/dialog";
@@ -127,7 +128,7 @@ export default function CouponsPage() {
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       <SelectItem value="percent">Percent (%)</SelectItem>
-                      <SelectItem value="fixed">Fixed ($)</SelectItem>
+                      <SelectItem value="fixed">Fixed (₹)</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -143,7 +144,7 @@ export default function CouponsPage() {
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1">
-                  <label className="text-xs font-medium">Min order ($) optional</label>
+                  <label className="text-xs font-medium">Min order (₹) optional</label>
                   <Input type="number" placeholder="e.g. 20" value={form.min_order_amount} onChange={(e) => setForm((f) => ({ ...f, min_order_amount: e.target.value }))} />
                 </div>
                 <div className="space-y-1">
@@ -192,14 +193,14 @@ export default function CouponsPage() {
                 <div className="bg-muted rounded-lg px-3 py-2 shrink-0 text-center min-w-[80px]">
                   <p className="font-mono font-bold text-sm text-primary">{c.code}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">
-                    {c.discount_type === "percent" ? `${c.discount_value}% off` : `$${c.discount_value} off`}
+                    {c.discount_type === "percent" ? `${c.discount_value}% off` : `${formatPrice(c.discount_value)} off`}
                   </p>
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 flex-wrap">
                     <span className={`text-xs font-medium ${color}`}>{label}</span>
                     {c.min_order_amount && (
-                      <Badge variant="secondary" className="text-xs">Min ${c.min_order_amount}</Badge>
+                      <Badge variant="secondary" className="text-xs">Min {formatPrice(c.min_order_amount)}</Badge>
                     )}
                     {c.max_uses !== null && (
                       <Badge variant="secondary" className="text-xs">{c.uses_count}/{c.max_uses} uses</Badge>
