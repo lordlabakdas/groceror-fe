@@ -18,6 +18,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { formatPrice } from "@/lib/currency";
 
 interface TopSellerItem {
   id: string;
@@ -77,7 +78,7 @@ export function RevenueTrendChart() {
           <h2 className="font-semibold text-sm">Revenue — Last 30 Days</h2>
         </div>
         <span className="text-sm text-muted-foreground">
-          <span className="font-semibold text-foreground">${total.toFixed(2)}</span>
+          <span className="font-semibold text-foreground">{formatPrice(total)}</span>
           {" · "}
           {totalOrders} order{totalOrders !== 1 ? "s" : ""}
         </span>
@@ -110,12 +111,12 @@ export function RevenueTrendChart() {
                 tickLine={false}
                 axisLine={false}
                 width={48}
-                tickFormatter={(v) => `$${v}`}
+                tickFormatter={(v) => formatPrice(v)}
               />
               <ChartTooltip
                 content={
                   <ChartTooltipContent
-                    formatter={(value) => [`$${Number(value).toFixed(2)}`, " revenue"]}
+                    formatter={(value) => [formatPrice(Number(value)), " revenue"]}
                   />
                 }
               />
@@ -164,7 +165,7 @@ export function TopSellersChart({ items }: { items: TopSellerItem[] }) {
         <ChartContainer config={topSellersConfig} className="h-56 w-full">
           <BarChart data={data} layout="vertical" margin={{ left: 8, right: 16 }}>
             <CartesianGrid horizontal={false} strokeOpacity={0.15} />
-            <XAxis type="number" tickFormatter={(v) => `$${v}`} fontSize={11} />
+            <XAxis type="number" tickFormatter={(v) => formatPrice(v)} fontSize={11} />
             <YAxis
               type="category"
               dataKey="name"
@@ -176,7 +177,7 @@ export function TopSellersChart({ items }: { items: TopSellerItem[] }) {
             <ChartTooltip
               content={
                 <ChartTooltipContent
-                  formatter={(value) => [`$${Number(value).toFixed(2)}`, " revenue"]}
+                  formatter={(value) => [formatPrice(Number(value)), " revenue"]}
                 />
               }
             />

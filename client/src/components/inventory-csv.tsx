@@ -7,7 +7,8 @@ import { apiRequest } from "@/lib/queryClient";
 import { type GrocerorInventoryItem } from "@/types/models";
 
 const VALID_CATEGORIES = new Set(["GROCERY", "PRODUCE", "MEAT", "DAIRY", "BAKERY", "OTHER"]);
-const CSV_HEADER = ["name", "category", "quantity", "price", "notes"];
+const VALID_UNITS = new Set(["UNIT", "G", "KG"]);
+const CSV_HEADER = ["name", "category", "quantity", "unit", "price", "notes"];
 
 // ---------------------------------------------------------------------------
 // CSV helpers — minimal quoted-field support, no dependency
@@ -61,6 +62,7 @@ export function InventoryCsvControls({ items }: { items: GrocerorInventoryItem[]
         escapeField(i.name),
         i.category,
         String(i.quantity),
+        i.unit,
         i.price.toFixed(2),
         escapeField(i.notes ?? ""),
       ].join(","),
@@ -99,12 +101,20 @@ export function InventoryCsvControls({ items }: { items: GrocerorInventoryItem[]
         });
         return;
       }
+      // "unit" is optional so older exports (pre-unit field) still import —
+      // look it up by column position instead of assuming a fixed layout.
+      const unitCol = header.indexOf("unit");
 
       let ok = 0;
       const failures: string[] = [];
 
       for (const line of lines.slice(1)) {
-        const [name, category, quantity, price, notes] = parseCsvLine(line);
+        const fields = parseCsvLine(line);
+        const [name, category, quantity] = fields;
+        const price = unitCol === -1 ? fields[3] : fields[4];
+        const notes = unitCol === -1 ? fields[4] : fields[5];
+        const rawUnit = unitCol === -1 ? "" : (fields[unitCol] ?? "").toUpperCase();
+        const unit = VALID_UNITS.has(rawUnit) ? rawUnit : "UNIT";
         const cat = (category ?? "").toUpperCase();
         if (!name || !VALID_CATEGORIES.has(cat)) {
           failures.push(name || "(missing name)");
@@ -114,6 +124,7 @@ export function InventoryCsvControls({ items }: { items: GrocerorInventoryItem[]
           await apiRequest("POST", "/inventory/add-inventory", {
             name,
             quantity: parseInt(quantity, 10) || 0,
+            unit,
             category: cat,
             price: parseFloat(price) || 0,
             notes: notes || undefined,

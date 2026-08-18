@@ -7,6 +7,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAddToCart } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
+import { formatPrice } from "@/lib/currency";
 
 interface WishlistItem {
   id: string;
@@ -106,12 +107,12 @@ export default function Wishlist() {
                 <div className="flex items-baseline gap-2 mt-0.5">
                   {item.sale_price != null ? (
                     <>
-                      <span className="text-base font-bold text-rose-400">${item.sale_price.toFixed(2)}</span>
-                      <span className="text-xs line-through text-muted-foreground">${item.price.toFixed(2)}</span>
+                      <span className="text-base font-bold text-rose-400">{formatPrice(item.sale_price)}</span>
+                      <span className="text-xs line-through text-muted-foreground">{formatPrice(item.price)}</span>
                       <Badge className="text-xs bg-rose-500/10 text-rose-400 border-rose-500/30">On sale</Badge>
                     </>
                   ) : (
-                    <span className="text-base font-bold">${item.price.toFixed(2)}</span>
+                    <span className="text-base font-bold">{formatPrice(item.price)}</span>
                   )}
                 </div>
                 {!item.is_in_stock && (

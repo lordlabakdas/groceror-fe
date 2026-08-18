@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Star, TrendingUp, TrendingDown, Gift, Crown } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { formatPrice } from "@/lib/currency";
 
 interface LoyaltyBalance {
   points_balance: number;
@@ -48,7 +49,7 @@ function TierProgress({ balance }: { balance: LoyaltyBalance }) {
   return (
     <div className="space-y-1.5">
       <div className="flex items-center justify-between text-xs text-muted-foreground">
-        <span>Spend ${balance.spend_to_next_tier.toFixed(2)} more to reach {nextLabel}</span>
+        <span>Spend {formatPrice(balance.spend_to_next_tier)} more to reach {nextLabel}</span>
         <span>{balance.multiplier}x → {nextMultiplier}x pts</span>
       </div>
       <div className="h-2 rounded-full bg-muted overflow-hidden">
@@ -109,7 +110,7 @@ export default function LoyaltyPage() {
     <div className="max-w-2xl mx-auto space-y-6">
       <div>
         <h1 className="text-2xl font-bold">Loyalty Points</h1>
-        <p className="text-sm text-muted-foreground mt-0.5">Earn 1 point per $1 spent — redeem at checkout (100 pts = $1)</p>
+        <p className="text-sm text-muted-foreground mt-0.5">Earn 1 point per ₹1 spent — redeem at checkout (100 pts = ₹1)</p>
       </div>
 
       {/* Balance card */}
@@ -156,9 +157,9 @@ export default function LoyaltyPage() {
       <div className="rounded-xl border bg-card p-4 space-y-2">
         <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">How it works</p>
         <div className="space-y-1.5 text-sm text-muted-foreground">
-          <p className="flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" /> Earn 1 point for every $1 you spend</p>
-          <p className="flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-yellow-400 shrink-0" /> Higher lifetime spend unlocks faster earning — Silver at $250 (1.25x), Gold at $750 (1.5x)</p>
-          <p className="flex items-center gap-2"><Gift className="h-3.5 w-3.5 text-amber-400 shrink-0" /> Redeem points at checkout — 100 points = $1 off</p>
+          <p className="flex items-center gap-2"><TrendingUp className="h-3.5 w-3.5 text-emerald-400 shrink-0" /> Earn 1 point for every ₹1 you spend</p>
+          <p className="flex items-center gap-2"><Crown className="h-3.5 w-3.5 text-yellow-400 shrink-0" /> Higher lifetime spend unlocks faster earning — Silver at ₹250 (1.25x), Gold at ₹750 (1.5x)</p>
+          <p className="flex items-center gap-2"><Gift className="h-3.5 w-3.5 text-amber-400 shrink-0" /> Redeem points at checkout — 100 points = ₹1 off</p>
           <p className="flex items-center gap-2"><Star className="h-3.5 w-3.5 text-primary shrink-0" /> Points never expire</p>
         </div>
       </div>

@@ -13,6 +13,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { ClipboardList, RefreshCw } from "lucide-react";
+import { formatPrice } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -122,7 +123,7 @@ function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
       </div>
 
       <div className="flex items-center justify-between pt-1 border-t">
-        <span className="font-semibold text-base">${order.total_price.toFixed(2)}</span>
+        <span className="font-semibold text-base">{formatPrice(order.total_price)}</span>
 
         {nextStatuses.length > 0 && (
           <Select

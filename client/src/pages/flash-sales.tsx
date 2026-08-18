@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { formatPrice } from "@/lib/currency";
 
 interface FlashSale {
   id: string;
@@ -124,8 +125,8 @@ export default function FlashSales() {
                   {!sale.is_active && <Badge variant="outline" className="text-xs text-muted-foreground">Cancelled</Badge>}
                 </div>
                 <div className="flex items-center gap-3 mt-1">
-                  <span className="text-base font-bold text-amber-400">${sale.sale_price.toFixed(2)}</span>
-                  <span className="text-xs line-through text-muted-foreground">${sale.original_price.toFixed(2)}</span>
+                  <span className="text-base font-bold text-amber-400">{formatPrice(sale.sale_price)}</span>
+                  <span className="text-xs line-through text-muted-foreground">{formatPrice(sale.original_price)}</span>
                   <Badge variant="outline" className="text-xs text-emerald-400 border-emerald-500/30">
                     {Math.round((1 - sale.sale_price / sale.original_price) * 100)}% off
                   </Badge>
@@ -165,14 +166,14 @@ export default function FlashSales() {
                 </SelectTrigger>
                 <SelectContent>
                   {items.map((item) => (
-                    <SelectItem key={item.id} value={item.id}>{item.name} (${item.price?.toFixed(2)})</SelectItem>
+                    <SelectItem key={item.id} value={item.id}>{item.name} ({formatPrice(item.price)})</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
             <div>
-              <label className="text-sm font-medium">Flash sale price ($)</label>
-              {selectedItem && <p className="text-xs text-muted-foreground">Regular price: ${selectedItem.price?.toFixed(2)}</p>}
+              <label className="text-sm font-medium">Flash sale price (₹)</label>
+              {selectedItem && <p className="text-xs text-muted-foreground">Regular price: {formatPrice(selectedItem.price)}</p>}
               <Input className="mt-1" type="number" step="0.01" min="0.01" placeholder="e.g. 1.99" value={salePrice} onChange={(e) => setSalePrice(e.target.value)} />
             </div>
             <div>

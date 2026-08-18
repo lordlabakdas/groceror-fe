@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Search, Check, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
@@ -20,6 +21,11 @@ import { Skeleton } from "@/components/ui/skeleton";
 
 import { CATEGORY_ENUM, getProductImage } from "@/lib/catalog";
 import type { GetProductsResponse } from "@/types/models";
+import { formatPrice, INVENTORY_UNIT_LABELS, type InventoryUnit } from "@/lib/currency";
+
+// Weight-based categories default to kg (produce/meat/dairy are commonly
+// sold by weight); everything else defaults to a plain unit count.
+const WEIGHT_DEFAULT_CATEGORIES = new Set(["Produce", "Meat", "Dairy"]);
 
 // Reverse of CATEGORY_ENUM: "PRODUCE" -> "Produce".
 const CATEGORY_LABEL: Record<string, string> = Object.fromEntries(
@@ -49,6 +55,9 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
   const [quantity, setQuantity] = useState(10);
+  const [unit, setUnit] = useState<InventoryUnit>(
+    item && WEIGHT_DEFAULT_CATEGORIES.has(item.category) ? "KG" : "UNIT"
+  );
   const [price, setPrice] = useState(item?.defaultPrice ?? 0);
   const [notes, setNotes] = useState("");
 
@@ -57,6 +66,7 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
       apiRequest("POST", "/inventory/add-inventory", {
         name: item!.name,
         quantity,
+        unit,
         category: CATEGORY_ENUM[item!.category] ?? "OTHER",
         price,
         notes: notes || undefined,
@@ -96,18 +106,31 @@ function AddInventoryDialog({ item, onClose, onSuccess }: AddDialogProps) {
           </div>
         </div>
         <div className="space-y-4">
-          <div className="space-y-1">
-            <Label htmlFor="qty">Quantity</Label>
-            <Input
-              id="qty"
-              type="number"
-              min={1}
-              value={quantity}
-              onChange={(e) => setQuantity(Number(e.target.value))}
-            />
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1">
+              <Label htmlFor="qty">Quantity</Label>
+              <Input
+                id="qty"
+                type="number"
+                min={1}
+                value={quantity}
+                onChange={(e) => setQuantity(Number(e.target.value))}
+              />
+            </div>
+            <div className="space-y-1">
+              <Label htmlFor="unit">Unit</Label>
+              <Select value={unit} onValueChange={(v) => setUnit(v as InventoryUnit)}>
+                <SelectTrigger id="unit"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(INVENTORY_UNIT_LABELS).map(([value, label]) => (
+                    <SelectItem key={value} value={value}>{label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           <div className="space-y-1">
-            <Label htmlFor="price">Price ($)</Label>
+            <Label htmlFor="price">Price (₹)</Label>
             <Input
               id="price"
               type="number"
@@ -171,7 +194,7 @@ function CatalogCard({ item, added, onAdd }: CatalogCardProps) {
         <div>
           <p className="font-semibold text-sm leading-tight">{item.name}</p>
           <p className="text-xs text-muted-foreground mt-0.5">
-            ${item.defaultPrice.toFixed(2)}
+            {formatPrice(item.defaultPrice)}
           </p>
         </div>
         <Button
@@ -317,6 +340,7 @@ export default function Products() {
       )}
 
       <AddInventoryDialog
+        key={dialogItem?.id ?? "none"}
         item={dialogItem}
         onClose={() => setDialogItem(null)}
         onSuccess={handleSuccess}

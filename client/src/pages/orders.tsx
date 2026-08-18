@@ -24,6 +24,7 @@ import { useCart } from "@/lib/cart";
 import { useToast } from "@/hooks/use-toast";
 import { getProductImage } from "@/lib/catalog";
 import { apiRequest } from "@/lib/queryClient";
+import { formatPrice } from "@/lib/currency";
 
 const DISPUTE_REASONS = [
   { value: "wrong_item", label: "Wrong item received" },
@@ -260,7 +261,7 @@ function OrderRow({ order }: { order: OrderItem }) {
           </p>
         </div>
         <div className="flex items-center gap-3 flex-shrink-0">
-          <span className="font-bold text-sm">${order.total_price.toFixed(2)}</span>
+          <span className="font-bold text-sm">{formatPrice(order.total_price)}</span>
           <Badge variant={statusVariant(order.status)} className="capitalize text-xs">
             {order.status}
           </Badge>
@@ -319,7 +320,7 @@ function OrderRow({ order }: { order: OrderItem }) {
               <span>
                 {item.name} <span className="text-muted-foreground">×{item.quantity}</span>
               </span>
-              <span className="text-muted-foreground">${(item.price * item.quantity).toFixed(2)}</span>
+              <span className="text-muted-foreground">{formatPrice(item.price * item.quantity)}</span>
             </div>
           ))}
           <p className="text-xs text-muted-foreground pt-2">

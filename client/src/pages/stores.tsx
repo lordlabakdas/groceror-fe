@@ -10,6 +10,7 @@ import { Search, MapPin, Globe, Map, List, Star, Navigation, Sparkles, Flame } f
 import { cn } from "@/lib/utils";
 import { apiRequest } from "@/lib/queryClient";
 import { useTheme } from "@/lib/theme-context";
+import { formatPrice } from "@/lib/currency";
 
 interface FeaturedStore {
   store_id: string;
@@ -163,9 +164,9 @@ function TrendingSection() {
               <p className="text-xs font-semibold leading-tight line-clamp-2">{item.inventory_name}</p>
               <div className="flex items-center gap-1">
                 <span className={cn("text-sm font-bold", isOnSale ? "text-amber-400" : "text-primary")}>
-                  ${price.toFixed(2)}
+                  {formatPrice(price)}
                 </span>
-                {isOnSale && <span className="text-xs line-through text-muted-foreground">${item.price.toFixed(2)}</span>}
+                {isOnSale && <span className="text-xs line-through text-muted-foreground">{formatPrice(item.price)}</span>}
               </div>
               <div className="flex items-center gap-1">
                 <p className="text-xs text-muted-foreground truncate">{item.store_name}</p>

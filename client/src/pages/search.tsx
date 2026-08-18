@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useAddToCart, useCart } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
+import { formatPrice } from "@/lib/currency";
 
 const CATEGORIES = ["Fruits & Vegetables", "Dairy & Eggs", "Meat & Seafood", "Bakery", "Beverages", "Snacks", "Frozen", "Pantry", "Personal Care", "Household"];
 
@@ -83,11 +84,11 @@ function CompareCard({
                 <div className="flex items-center gap-1.5">
                   {item.sale_price != null ? (
                     <div className="flex items-baseline gap-1">
-                      <span className="font-bold text-sm text-rose-400">${item.sale_price.toFixed(2)}</span>
-                      <span className="text-xs line-through text-muted-foreground">${item.price.toFixed(2)}</span>
+                      <span className="font-bold text-sm text-rose-400">{formatPrice(item.sale_price)}</span>
+                      <span className="text-xs line-through text-muted-foreground">{formatPrice(item.price)}</span>
                     </div>
                   ) : (
-                    <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
+                    <span className="font-bold text-sm">{formatPrice(item.price)}</span>
                   )}
                   {isCheapest && (
                     <Badge className="text-[10px] px-1.5 py-0 h-4 bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/20">
@@ -169,11 +170,11 @@ function ResultCard({
         <div className="flex-shrink-0 text-right">
           {item.sale_price != null ? (
             <>
-              <span className="font-bold text-sm text-rose-400">${item.sale_price.toFixed(2)}</span>
-              <span className="text-xs line-through text-muted-foreground ml-1">${item.price.toFixed(2)}</span>
+              <span className="font-bold text-sm text-rose-400">{formatPrice(item.sale_price)}</span>
+              <span className="text-xs line-through text-muted-foreground ml-1">{formatPrice(item.price)}</span>
             </>
           ) : (
-            <span className="font-bold text-sm">${item.price.toFixed(2)}</span>
+            <span className="font-bold text-sm">{formatPrice(item.price)}</span>
           )}
         </div>
       </div>

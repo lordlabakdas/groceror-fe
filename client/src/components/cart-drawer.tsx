@@ -10,6 +10,7 @@ import { useCart, type CartItem } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { formatPrice } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -66,7 +67,7 @@ function computeBulkDiscount(items: CartItem[], rules: BulkRuleAPI[]): { discoun
       if (freeUnits > 0) {
         const d = freeUnits * (priceMap[rule.bxgf_inventory_id] ?? 0);
         discount += d;
-        applied.push(`${rule.name} (−$${d.toFixed(2)})`);
+        applied.push(`${rule.name} (−${formatPrice(d)})`);
       }
     } else if (rule.rule_type === "bundle" && rule.discount_value) {
       const bundleIds = rule.bundle_items.map((b) => b.inventory_id);
@@ -76,7 +77,7 @@ function computeBulkDiscount(items: CartItem[], rules: BulkRuleAPI[]): { discoun
           ? Math.round(bundleSubtotal * rule.discount_value / 100 * 100) / 100
           : Math.min(rule.discount_value, bundleSubtotal);
         discount += d;
-        applied.push(`${rule.name} (−$${d.toFixed(2)})`);
+        applied.push(`${rule.name} (−${formatPrice(d)})`);
       }
     }
   }
@@ -259,7 +260,7 @@ function CartView({
         <div className="shrink-0 border-t px-4 py-4 space-y-3">
           <div className="flex items-center justify-between text-sm">
             <span className="text-muted-foreground">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
-            <span className="font-semibold text-primary text-base">${total.toFixed(2)}</span>
+            <span className="font-semibold text-primary text-base">{formatPrice(total)}</span>
           </div>
           <Button className="w-full" onClick={onCheckout}>Checkout →</Button>
         </div>
@@ -280,14 +281,14 @@ interface CartItemRowProps {
 
 function CartItemRow({ item, onUpdateQuantity, onRemoveItem }: CartItemRowProps) {
   const imageUrl = item.imageUrl || getProductImage(item.name, "OTHER");
-  const subtotal = (item.price * item.quantity).toFixed(2);
+  const subtotal = item.price * item.quantity;
 
   return (
     <div className="flex gap-3 items-start">
       <img src={imageUrl} alt={item.name} className="w-12 h-12 rounded-md object-cover shrink-0 border" />
       <div className="flex-1 min-w-0">
         <p className="text-sm font-medium leading-tight truncate">{item.name}</p>
-        <p className="text-xs text-muted-foreground mt-0.5">${item.price.toFixed(2)} each</p>
+        <p className="text-xs text-muted-foreground mt-0.5">{formatPrice(item.price)} each</p>
         <div className="flex items-center justify-between mt-2">
           <div className="flex items-center gap-1.5">
             <Button variant="outline" size="icon" className="h-6 w-6" disabled={item.quantity <= 1} onClick={() => onUpdateQuantity(item.id, item.storeId, -1, item.quantity)}>
@@ -299,7 +300,7 @@ function CartItemRow({ item, onUpdateQuantity, onRemoveItem }: CartItemRowProps)
             </Button>
           </div>
           <div className="flex items-center gap-2">
-            <span className="text-sm font-semibold text-primary">${subtotal}</span>
+            <span className="text-sm font-semibold text-primary">{formatPrice(subtotal)}</span>
             <Button variant="ghost" size="icon" className="h-6 w-6 text-muted-foreground hover:text-destructive" onClick={() => onRemoveItem(item.id, item.storeId)}>
               <Trash2 className="h-3.5 w-3.5" />
             </Button>
@@ -450,7 +451,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       const data: CouponResult = await res.json();
       setCouponResult(data);
       if (data.valid) {
-        toast({ description: `Coupon applied — you save $${data.discount_amount.toFixed(2)}!` });
+        toast({ description: `Coupon applied — you save ${formatPrice(data.discount_amount)}!` });
       } else {
         toast({ description: data.message, variant: "destructive" });
       }
@@ -517,7 +518,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
         {/* Collapsed cart summary */}
         <div className="bg-muted border border-border rounded-lg px-3 py-2.5 flex items-center justify-between">
           <div>
-            <p className="text-foreground font-semibold text-sm">{itemCount} {itemCount === 1 ? "item" : "items"} · ${total.toFixed(2)}</p>
+            <p className="text-foreground font-semibold text-sm">{itemCount} {itemCount === 1 ? "item" : "items"} · {formatPrice(total)}</p>
             <p className="text-foreground text-xs mt-0.5">{summaryItems}{summaryMore}</p>
           </div>
           <button className="text-xs text-muted-foreground bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1 transition-colors" onClick={onBack}>
@@ -552,14 +553,14 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
                       <div>
                         <span className="font-mono text-sm font-semibold text-primary">{c.code}</span>
                         {c.min_order_amount && (
-                          <span className="text-xs text-muted-foreground ml-2">min ${c.min_order_amount.toFixed(2)}</span>
+                          <span className="text-xs text-muted-foreground ml-2">min {formatPrice(c.min_order_amount)}</span>
                         )}
                         {c.valid_until && (
                           <span className="text-xs text-muted-foreground ml-2">expires {new Date(c.valid_until).toLocaleDateString()}</span>
                         )}
                       </div>
                       <span className="text-xs font-semibold text-emerald-400">
-                        {c.discount_type === "percent" ? `${c.discount_value}% off` : `$${c.discount_value.toFixed(2)} off`}
+                        {c.discount_type === "percent" ? `${c.discount_value}% off` : `${formatPrice(c.discount_value)} off`}
                       </span>
                     </button>
                   ))}
@@ -610,7 +611,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
         {loyaltyBalance && loyaltyBalance.points_balance > 0 && (
           <div className="space-y-2">
             <p className="text-xs font-medium text-muted-foreground flex items-center gap-1.5">
-              <Star className="h-3 w-3" /> Loyalty points ({loyaltyBalance.points_balance} pts = ${loyaltyBalance.dollar_value.toFixed(2)})
+              <Star className="h-3 w-3" /> Loyalty points ({loyaltyBalance.points_balance} pts = {formatPrice(loyaltyBalance.dollar_value)})
             </p>
             <div className="flex gap-2 items-center">
               <Input
@@ -627,7 +628,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
                 className="h-9 text-sm"
               />
               <span className="text-xs text-muted-foreground shrink-0">
-                = ${(pointsToRedeem / 100).toFixed(2)} off
+                = {formatPrice(pointsToRedeem / 100)} off
               </span>
               <Button variant="ghost" size="sm" className="h-9 shrink-0 text-xs" onClick={() => setPointsToRedeem(Math.floor(Math.min(loyaltyBalance.points_balance, total * 100) / 100) * 100)}>
                 Max
@@ -653,29 +654,29 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1.5 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
-              <span>${total.toFixed(2)}</span>
+              <span>{formatPrice(total)}</span>
             </div>
             {bulkDiscount > 0 && (
               <div className="flex justify-between text-emerald-400">
                 <span>Bulk deals</span>
-                <span>−${bulkDiscount.toFixed(2)}</span>
+                <span>−{formatPrice(bulkDiscount)}</span>
               </div>
             )}
             {couponDiscount > 0 && (
               <div className="flex justify-between text-emerald-400 font-medium">
                 <span>Coupon ({couponInput})</span>
-                <span>−${couponDiscount.toFixed(2)}</span>
+                <span>−{formatPrice(couponDiscount)}</span>
               </div>
             )}
             {loyaltyDiscount > 0 && (
               <div className="flex justify-between text-amber-400">
                 <span>Loyalty points ({pointsToRedeem} pts)</span>
-                <span>−${loyaltyDiscount.toFixed(2)}</span>
+                <span>−{formatPrice(loyaltyDiscount)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base border-t border-border pt-2 mt-1">
               <span>Total</span>
-              <span className="text-primary">${finalTotal.toFixed(2)}</span>
+              <span className="text-primary">{formatPrice(finalTotal)}</span>
             </div>
           </div>
         )}
@@ -737,7 +738,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
               Placing order…
             </span>
           ) : (
-            `Place Order — $${finalTotal.toFixed(2)}`
+            `Place Order — ${formatPrice(finalTotal)}`
           )}
         </Button>
 
@@ -804,14 +805,14 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
         <div>
           <h3 className="font-bold text-xl">You're all set!</h3>
           {storeName && <p className="text-sm text-muted-foreground mt-1">{storeName}</p>}
-          <p className="text-sm font-semibold text-primary mt-1">${finalTotal.toFixed(2)} charged</p>
+          <p className="text-sm font-semibold text-primary mt-1">{formatPrice(finalTotal)} charged</p>
         </div>
 
         {(discountAmount > 0 || pointsEarned > 0) && (
           <div className="w-full bg-muted border border-border rounded-xl p-4 text-left space-y-1.5">
             {discountAmount > 0 && (
               <p className="text-sm text-emerald-400 flex items-center gap-1.5">
-                <Tag className="h-3.5 w-3.5" /> Saved ${discountAmount.toFixed(2)} with discounts
+                <Tag className="h-3.5 w-3.5" /> Saved {formatPrice(discountAmount)} with discounts
               </p>
             )}
             {pointsEarned > 0 && (

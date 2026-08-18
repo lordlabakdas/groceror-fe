@@ -38,6 +38,7 @@ import {
   Calendar,
   Tag,
 } from "lucide-react";
+import { formatPrice, formatQuantity, type InventoryUnit } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -61,11 +62,35 @@ const CATEGORY_COLOR: Record<string, string> = {
   OTHER: "bg-purple-900/40 text-purple-300",
 };
 
-function stockStatus(qty: number): { label: string; color: string } {
+// Thresholds are defined in "grams basis" for weight units (so a KG item and
+// the equivalent G item hit Critical/Low Stock at the same physical
+// quantity) and in raw counts for plain UNIT items.
+const CRITICAL_THRESHOLD_G = 5000; // 5kg
+const LOW_STOCK_THRESHOLD_G = 20000; // 20kg
+const CRITICAL_THRESHOLD_UNITS = 5;
+const LOW_STOCK_THRESHOLD_UNITS = 20;
+
+function toGramsBasis(qty: number, unit: InventoryUnit): number {
+  return unit === "KG" ? qty * 1000 : qty;
+}
+
+function stockStatus(qty: number, unit: InventoryUnit): { label: string; color: string } {
   if (qty === 0) return { label: "Out of Stock", color: "bg-red-900/30 text-red-400" };
-  if (qty < 5) return { label: "Critical", color: "bg-red-900/30 text-red-400" };
-  if (qty < 20) return { label: "Low Stock", color: "bg-amber-900/30 text-amber-400" };
+  const isWeight = unit === "KG" || unit === "G";
+  const normalized = toGramsBasis(qty, unit);
+  const critical = isWeight ? CRITICAL_THRESHOLD_G : CRITICAL_THRESHOLD_UNITS;
+  const low = isWeight ? LOW_STOCK_THRESHOLD_G : LOW_STOCK_THRESHOLD_UNITS;
+  if (normalized < critical) return { label: "Critical", color: "bg-red-900/30 text-red-400" };
+  if (normalized < low) return { label: "Low Stock", color: "bg-amber-900/30 text-amber-400" };
   return { label: "In Stock", color: "bg-primary/15 text-primary" };
+}
+
+// "Full bar" reference capacity for the quantity progress bar — a gram-
+// denominated item routinely holds far more raw units than a plain count,
+// so it needs a proportionally larger cap to avoid always reading ~100%.
+function stockBarPercent(qty: number, unit: InventoryUnit): number {
+  const capacity = unit === "G" ? 100_000 : 100; // 100kg-equivalent for grams
+  return Math.min(100, (qty / capacity) * 100);
 }
 
 function expiryStatus(expiryDate?: string | null): { label: string; color: string } | null {
@@ -160,7 +185,9 @@ function EditQuantityDialog({ item, onClose }: EditDialogProps) {
         </DialogHeader>
         <div className="space-y-4 pt-1">
           <div className="space-y-1">
-            <Label htmlFor="edit-qty">Quantity</Label>
+            <Label htmlFor="edit-qty">
+              Quantity {item.unit !== "UNIT" && `(${item.unit.toLowerCase()})`}
+            </Label>
             <Input
               id="edit-qty"
               type="number"
@@ -202,7 +229,7 @@ function EditPriceDialog({ item, onClose }: EditDialogProps) {
       apiRequest("PUT", `/inventory/${item!.id}`, { price }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
-      toast({ title: "Price updated", description: `${item!.name} is now $${price.toFixed(2)}.` });
+      toast({ title: "Price updated", description: `${item!.name} is now ${formatPrice(price)}.` });
       onClose();
     },
     onError: (err: any) => {
@@ -220,7 +247,7 @@ function EditPriceDialog({ item, onClose }: EditDialogProps) {
         </DialogHeader>
         <div className="space-y-4 pt-1">
           <div className="space-y-1">
-            <Label htmlFor="edit-price">Price ($)</Label>
+            <Label htmlFor="edit-price">Price (₹)</Label>
             <Input
               id="edit-price"
               type="number"
@@ -259,7 +286,7 @@ function EditPromotionDialog({ item, onClose }: EditDialogProps) {
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/inventory/get-store-inventory"] });
-      toast({ title: "Promotion set", description: `Sale price $${salePrice.toFixed(2)} active until ${endDate}.` });
+      toast({ title: "Promotion set", description: `Sale price ${formatPrice(salePrice)} active until ${endDate}.` });
       onClose();
     },
     onError: (err: any) => {
@@ -286,10 +313,10 @@ function EditPromotionDialog({ item, onClose }: EditDialogProps) {
         </DialogHeader>
         <div className="space-y-4 pt-1">
           <p className="text-xs text-muted-foreground">
-            Regular price: <span className="font-semibold">${item.price.toFixed(2)}</span>
+            Regular price: <span className="font-semibold">{formatPrice(item.price)}</span>
           </p>
           <div className="space-y-1">
-            <Label htmlFor="promo-price">Sale price ($)</Label>
+            <Label htmlFor="promo-price">Sale price (₹)</Label>
             <Input
               id="promo-price"
               type="number"
@@ -419,7 +446,7 @@ interface InventoryCardProps {
 
 function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry, onSetPromotion }: InventoryCardProps) {
   const imgUrl = getProductImage(item.name, item.category);
-  const { label: stockLabel, color: stockColor } = stockStatus(item.quantity);
+  const { label: stockLabel, color: stockColor } = stockStatus(item.quantity, item.unit);
   const expiry = expiryStatus(item.expiry_date);
   const categoryLabel = CATEGORY_LABEL[item.category] ?? item.category;
   const categoryColor = CATEGORY_COLOR[item.category] ?? "bg-secondary text-muted-foreground";
@@ -492,11 +519,11 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry, onSetP
           <div>
             {item.sale_price != null ? (
               <>
-                <span className="text-2xl font-bold text-rose-400">${item.sale_price.toFixed(2)}</span>
-                <span className="text-sm line-through text-muted-foreground ml-2">${item.price.toFixed(2)}</span>
+                <span className="text-2xl font-bold text-rose-400">{formatPrice(item.sale_price)}</span>
+                <span className="text-sm line-through text-muted-foreground ml-2">{formatPrice(item.price)}</span>
               </>
             ) : (
-              <span className="text-2xl font-bold text-primary">${item.price.toFixed(2)}</span>
+              <span className="text-2xl font-bold text-primary">{formatPrice(item.price)}</span>
             )}
           </div>
           <div className="flex flex-col items-end gap-1">
@@ -518,22 +545,20 @@ function InventoryCard({ item, onDelete, onEdit, onSetPrice, onSetExpiry, onSetP
 
         <div className="flex items-center justify-between text-sm">
           <span className="text-muted-foreground">Qty</span>
-          <span className="font-semibold tabular-nums">{item.quantity.toLocaleString()} units</span>
+          <span className="font-semibold tabular-nums">{formatQuantity(item.quantity, item.unit)}</span>
         </div>
 
         {/* quantity bar */}
         <div className="h-1.5 rounded-full bg-muted overflow-hidden">
           <div
             className={`h-full rounded-full transition-all ${
-              item.quantity === 0
+              stockLabel === "Out of Stock" || stockLabel === "Critical"
                 ? "bg-red-500"
-                : item.quantity < 5
-                ? "bg-red-500"
-                : item.quantity < 20
+                : stockLabel === "Low Stock"
                 ? "bg-amber-500"
                 : "bg-primary"
             }`}
-            style={{ width: `${Math.min(100, (item.quantity / 100) * 100)}%` }}
+            style={{ width: `${stockBarPercent(item.quantity, item.unit)}%` }}
           />
         </div>
       </div>
@@ -576,10 +601,16 @@ export default function Inventory() {
 
   // stats
   const totalValue = items.reduce((sum, i) => sum + i.price * i.quantity, 0);
-  const totalUnits = items.reduce((sum, i) => sum + i.quantity, 0);
-  // Matches the "Low Stock" badge tier in stockStatus and the dashboard's
-  // default threshold.
-  const lowStockCount = items.filter((i) => i.quantity < 20).length;
+  // Only plain-count items sum meaningfully into a single "units" number —
+  // mixing in kg/g quantities would produce a nonsensical total. Weight-
+  // tracked stock gets its own kg total in the sub-label instead.
+  const totalUnits = items
+    .filter((i) => i.unit === "UNIT")
+    .reduce((sum, i) => sum + i.quantity, 0);
+  const totalWeightKg = items
+    .filter((i) => i.unit === "KG" || i.unit === "G")
+    .reduce((sum, i) => sum + (i.unit === "KG" ? i.quantity : i.quantity / 1000), 0);
+  const lowStockCount = items.filter((i) => stockStatus(i.quantity, i.unit).label !== "In Stock").length;
 
   const filtered = items.filter((i) =>
     i.name.toLowerCase().includes(search.toLowerCase()),
@@ -656,13 +687,13 @@ export default function Inventory() {
           icon={<BarChart3 className="h-4 w-4 text-white" />}
           label="Total Units"
           value={totalUnits.toLocaleString()}
-          sub="across all items"
+          sub={totalWeightKg > 0 ? `+ ${totalWeightKg.toFixed(1)}kg tracked by weight` : "across all items"}
         />
         <StatCard
           gradient="bg-gradient-to-br from-amber-500 to-orange-500"
           icon={<DollarSign className="h-4 w-4 text-white" />}
           label="Inventory Value"
-          value={`$${totalValue.toFixed(2)}`}
+          value={formatPrice(totalValue)}
           sub="at current prices"
         />
       </div>
