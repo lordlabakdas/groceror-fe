@@ -115,7 +115,21 @@ interface OrderItem {
   order_date: string;
   store_id?: string | null;
   store_name?: string | null;
+  // None = pickup order (no delivery requested). See SPEC_DELIVERY_DISPATCH.md.
+  delivery_fee?: number | null;
+  delivery_status?: string | null;
 }
+
+const DELIVERY_STATUS_LABELS: Record<string, string> = {
+  quoted: "Delivery requested",
+  requested: "Delivery requested",
+  confirmed: "Courier confirmed",
+  picked_up: "Picked up",
+  in_transit: "Out for delivery",
+  delivered: "Delivered",
+  failed: "Delivery couldn't be arranged — check with the store",
+  cancelled: "Delivery cancelled",
+};
 
 interface OrderHistoryResponse {
   orders: OrderItem[];
@@ -273,6 +287,19 @@ function OrderRow({ order }: { order: OrderItem }) {
           <div className="pb-4 pt-1">
             <OrderTimeline status={order.status} />
           </div>
+
+          {order.delivery_fee != null && (
+            <div className="flex items-center justify-between rounded-lg bg-muted border border-border px-3 py-2 mb-3 text-xs">
+              <span className="text-muted-foreground flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5" />
+                {order.delivery_status
+                  ? DELIVERY_STATUS_LABELS[order.delivery_status] ?? order.delivery_status
+                  : "Delivery — store hasn't requested a courier yet"}
+              </span>
+              <span className="text-muted-foreground">{formatPrice(order.delivery_fee)}</span>
+            </div>
+          )}
+
           <div className="flex items-center justify-between mb-2">
             <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">
               Items

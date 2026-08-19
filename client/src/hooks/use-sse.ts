@@ -10,10 +10,11 @@ const BASE_URL = import.meta.env.VITE_API_URL || "";
 /**
  * Opens a single SSE connection to /sse/stream for the logged-in user.
  * Handles:
- *   - order_status_update  → invalidate /order/history + toast (shopper)
- *   - new_order            → invalidate /order/store-orders + toast (store)
- *   - low_stock_alert      → invalidate /stock-alerts + toast (store)
- *   - back_in_stock        → invalidate /back-in-stock + toast (shopper)
+ *   - order_status_update    → invalidate /order/history + toast (shopper)
+ *   - new_order              → invalidate /order/store-orders + toast (store)
+ *   - delivery_status_update → invalidate /order/history + /order/store-orders + toast (both)
+ *   - low_stock_alert        → invalidate /stock-alerts + toast (store)
+ *   - back_in_stock          → invalidate /back-in-stock + toast (shopper)
  *
  * Reconnects automatically (browser EventSource behaviour) with up to 3 retries
  * before giving up to avoid hammering a down server.
@@ -55,6 +56,16 @@ export function useSSE() {
         toast({
           title: "New order received",
           description: `${formatPrice(data.total_price)} order just came in.`,
+        });
+      });
+
+      es.addEventListener("delivery_status_update", (e) => {
+        const data = JSON.parse(e.data) as { order_id: string; status: string };
+        queryClient.invalidateQueries({ queryKey: ["/order/history"] });
+        queryClient.invalidateQueries({ queryKey: ["/order/store-orders"] });
+        toast({
+          title: "Delivery update",
+          description: `Delivery status: ${data.status.toLowerCase().replace(/_/g, " ")}.`,
         });
       });
 

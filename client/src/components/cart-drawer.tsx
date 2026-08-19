@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock, ChevronDown } from "lucide-react";
+import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock, ChevronDown, Truck, MapPin } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -90,6 +90,7 @@ interface ConfirmationData {
   pointsEarned: number;
   discountAmount: number;
   finalTotal: number;
+  deliveryFee?: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -400,6 +401,56 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   const [bulkRules, setBulkRules] = useState<BulkRuleAPI[]>([]);
   const storeId = items[0]?.storeId;
 
+  // Delivery (see SPEC_DELIVERY_DISPATCH.md). v1 only supports setting the
+  // dropoff point via the browser's geolocation API — same pattern the
+  // store-owner delivery-zone page already uses — rather than a full
+  // address-entry/geocoding UI.
+  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">("pickup");
+  const [deliveryAddress, setDeliveryAddress] = useState("");
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [locating, setLocating] = useState(false);
+  const [quote, setQuote] = useState<{ fee: number } | null>(null);
+  const [quoting, setQuoting] = useState(false);
+  const [quoteError, setQuoteError] = useState<string | null>(null);
+
+  function useMyLocationForDelivery() {
+    if (!navigator.geolocation) return;
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        setDeliveryCoords({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+        setLocating(false);
+      },
+      () => {
+        toast({ title: "Could not detect location", variant: "destructive" });
+        setLocating(false);
+      }
+    );
+  }
+
+  useEffect(() => {
+    if (fulfillment !== "delivery" || !deliveryCoords || !storeId) {
+      setQuote(null);
+      return;
+    }
+    setQuoting(true);
+    setQuoteError(null);
+    apiRequest("POST", "/order/delivery-quote", {
+      store_id: storeId,
+      dropoff_lat: deliveryCoords.lat,
+      dropoff_lng: deliveryCoords.lng,
+    })
+      .then((r) => r.json())
+      .then((d: { fee: number }) => setQuote({ fee: d.fee }))
+      .catch((err: unknown) => {
+        setQuote(null);
+        setQuoteError(err instanceof Error ? err.message.replace(/^\d+:\s*/, "") : "Delivery unavailable for this address");
+      })
+      .finally(() => setQuoting(false));
+  }, [fulfillment, deliveryCoords, storeId]);
+
+  const deliveryFee = fulfillment === "delivery" ? (quote?.fee ?? 0) : 0;
+
   useEffect(() => {
     apiRequest("GET", "/loyalty/balance")
       .then((r) => r.json())
@@ -424,7 +475,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   const { discount: bulkDiscount, applied: bulkApplied } = computeBulkDiscount(items, bulkRules);
   const couponDiscount = couponResult?.valid ? couponResult.discount_amount : 0;
   const loyaltyDiscount = Math.min(pointsToRedeem / 100, Math.max(0, total - bulkDiscount));
-  const finalTotal = Math.max(0, total - bulkDiscount - couponDiscount - loyaltyDiscount);
+  const finalTotal = Math.max(0, total - bulkDiscount - couponDiscount - loyaltyDiscount) + deliveryFee;
 
   const errors = validateCard(form);
   const hasErrors = Object.keys(errors).length > 0;
@@ -467,6 +518,10 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   async function handlePlaceOrder() {
     setTouched({ cardNumber: true, expiry: true, cvv: true, nameOnCard: true });
     if (hasErrors) return;
+    if (fulfillment === "delivery" && !deliveryCoords) {
+      toast({ description: "Set a delivery location first, or switch to pickup.", variant: "destructive" });
+      return;
+    }
     setSubmitting(true);
     setApiError(null);
     try {
@@ -476,6 +531,13 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
         items: orderItems,
         coupon_code: couponResult?.valid ? couponInput.trim().toUpperCase() : undefined,
         points_to_redeem: pointsToRedeem,
+        ...(fulfillment === "delivery" && deliveryCoords
+          ? {
+              delivery_address_line: deliveryAddress || undefined,
+              delivery_lat: deliveryCoords.lat,
+              delivery_lng: deliveryCoords.lng,
+            }
+          : {}),
       });
       const data = await res.json();
       onSuccess({
@@ -483,6 +545,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
         pointsEarned: data.points_earned ?? 0,
         discountAmount: data.discount_amount ?? 0,
         finalTotal: data.total_price ?? finalTotal,
+        deliveryFee: data.delivery_fee ?? null,
       });
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Order failed. Please try again.";
@@ -505,7 +568,11 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </Button>
           <div>
             <SheetTitle className="text-white text-lg font-semibold leading-tight">Checkout</SheetTitle>
-            {storeName && <p className="text-muted-foreground text-sm mt-0.5">{storeName} · Pickup</p>}
+            {storeName && (
+              <p className="text-muted-foreground text-sm mt-0.5">
+                {storeName} · {fulfillment === "delivery" ? "Delivery" : "Pickup"}
+              </p>
+            )}
           </div>
         </div>
         <button className="h-8 w-8 rounded-full flex items-center justify-center text-muted-foreground hover:bg-muted transition-colors" onClick={onClose} aria-label="Close">
@@ -524,6 +591,69 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           <button className="text-xs text-muted-foreground bg-muted hover:bg-muted/80 border border-border rounded-full px-3 py-1 transition-colors" onClick={onBack}>
             ← Edit
           </button>
+        </div>
+
+        {/* Fulfillment: pickup or delivery */}
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              className={`flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2.5 border transition-colors ${
+                fulfillment === "pickup" ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+              }`}
+              onClick={() => setFulfillment("pickup")}
+            >
+              <Package className="h-4 w-4" /> Pickup
+            </button>
+            <button
+              type="button"
+              className={`flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2.5 border transition-colors ${
+                fulfillment === "delivery" ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
+              }`}
+              onClick={() => setFulfillment("delivery")}
+            >
+              <Truck className="h-4 w-4" /> Delivery
+            </button>
+          </div>
+
+          {fulfillment === "delivery" && (
+            <div className="space-y-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+              <Input
+                placeholder="Delivery address (for the rider)"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="h-8 text-xs w-full"
+                disabled={locating}
+                onClick={useMyLocationForDelivery}
+              >
+                <MapPin className="h-3.5 w-3.5 mr-1" />
+                {locating ? "Locating…" : deliveryCoords ? "Location set — update" : "Use my location"}
+              </Button>
+
+              {quoting && <p className="text-xs text-muted-foreground">Checking delivery fee…</p>}
+              {quote && !quoting && (
+                <p className="text-xs text-emerald-400">Delivery fee: {formatPrice(quote.fee)}</p>
+              )}
+              {quoteError && !quoting && (
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs text-destructive">{quoteError}</p>
+                  <button
+                    type="button"
+                    className="text-xs text-primary hover:underline shrink-0"
+                    onClick={() => setFulfillment("pickup")}
+                  >
+                    Switch to pickup
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Coupon code */}
@@ -649,8 +779,8 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </div>
         )}
 
-        {/* Order total breakdown — always visible once any discount applies */}
-        {(bulkDiscount > 0 || couponDiscount > 0 || loyaltyDiscount > 0) && (
+        {/* Order total breakdown — always visible once any discount or the delivery fee applies */}
+        {(bulkDiscount > 0 || couponDiscount > 0 || loyaltyDiscount > 0 || deliveryFee > 0) && (
           <div className="bg-muted/50 border border-border rounded-lg px-3 py-2.5 space-y-1.5 text-sm">
             <div className="flex justify-between text-muted-foreground">
               <span>Subtotal</span>
@@ -672,6 +802,12 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
               <div className="flex justify-between text-amber-400">
                 <span>Loyalty points ({pointsToRedeem} pts)</span>
                 <span>−{formatPrice(loyaltyDiscount)}</span>
+              </div>
+            )}
+            {deliveryFee > 0 && (
+              <div className="flex justify-between text-muted-foreground">
+                <span>Delivery fee</span>
+                <span>{formatPrice(deliveryFee)}</span>
               </div>
             )}
             <div className="flex justify-between font-bold text-base border-t border-border pt-2 mt-1">
@@ -731,7 +867,11 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
 
       {/* Sticky CTA */}
       <div className="border-t px-4 py-4 flex-shrink-0 space-y-2">
-        <Button className="w-full" disabled={submitting} onClick={handlePlaceOrder}>
+        <Button
+          className="w-full"
+          disabled={submitting || (fulfillment === "delivery" && (quoting || !!quoteError || !deliveryCoords))}
+          onClick={handlePlaceOrder}
+        >
           {submitting ? (
             <span className="flex items-center gap-2">
               <span className="h-4 w-4 border-2 border-white/40 border-t-white rounded-full animate-spin" />
@@ -790,7 +930,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
 // ConfirmationView
 // ---------------------------------------------------------------------------
 
-function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal, onClose }: ConfirmationData & { onClose: () => void }) {
+function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal, deliveryFee, onClose }: ConfirmationData & { onClose: () => void }) {
   const [, setLocation] = useLocation();
 
   return (
@@ -808,7 +948,7 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
           <p className="text-sm font-semibold text-primary mt-1">{formatPrice(finalTotal)} charged</p>
         </div>
 
-        {(discountAmount > 0 || pointsEarned > 0) && (
+        {(discountAmount > 0 || pointsEarned > 0 || !!deliveryFee) && (
           <div className="w-full bg-muted border border-border rounded-xl p-4 text-left space-y-1.5">
             {discountAmount > 0 && (
               <p className="text-sm text-emerald-400 flex items-center gap-1.5">
@@ -820,14 +960,22 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
                 <Star className="h-3.5 w-3.5" /> Earned {pointsEarned} loyalty points
               </p>
             )}
+            {!!deliveryFee && (
+              <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                <Truck className="h-3.5 w-3.5" /> Delivery fee: {formatPrice(deliveryFee)}
+              </p>
+            )}
           </div>
         )}
 
         <div className="w-full bg-muted border border-border rounded-xl p-4 text-left">
           <p className="text-xs font-bold text-foreground mb-1.5">What happens next</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {storeName || "The store"} will confirm your order. Head to{" "}
-            <span className="text-primary font-semibold">Orders</span> to track its status.
+            {deliveryFee
+              ? <>{storeName || "The store"} will pack your order, then request a courier. Head to{" "}
+                  <span className="text-primary font-semibold">Orders</span> to track delivery status.</>
+              : <>{storeName || "The store"} will confirm your order. Head to{" "}
+                  <span className="text-primary font-semibold">Orders</span> to track its status.</>}
           </p>
         </div>
 
