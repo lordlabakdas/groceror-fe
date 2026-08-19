@@ -60,11 +60,7 @@ app.use((req, res, next) => {
   // PORT so e.g. Playwright can run an isolated instance alongside a normal
   // dev server (see playwright.config.ts).
   const port = Number(process.env.PORT) || 5000;
-  server.listen({
-    port,
-    host: "0.0.0.0",
-    reusePort: true,
-  }, () => {
+  server.listen(port, "0.0.0.0", () => {
     log(`serving on port ${port}`);
   });
 })();

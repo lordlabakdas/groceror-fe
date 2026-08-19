@@ -30,6 +30,17 @@ repositories {
     }
 }
 
+configurations.all {
+    resolutionStrategy {
+        // Some transitive deps (kotlinx-coroutines-android) still pull the old
+        // kotlin-stdlib-jdk7/jdk8 artifacts, which duplicate classes now bundled
+        // into kotlin-stdlib itself since Kotlin 1.8 — force them to match.
+        force 'org.jetbrains.kotlin:kotlin-stdlib:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk7:1.8.22'
+        force 'org.jetbrains.kotlin:kotlin-stdlib-jdk8:1.8.22'
+    }
+}
+
 dependencies {
     implementation fileTree(include: ['*.jar'], dir: 'libs')
     implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
