@@ -12,7 +12,7 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
-import { ClipboardList, RefreshCw } from "lucide-react";
+import { ClipboardList, RefreshCw, Truck } from "lucide-react";
 import { formatPrice } from "@/lib/currency";
 
 // ---------------------------------------------------------------------------
@@ -32,6 +32,8 @@ interface StoreOrder {
   status: string;
   items: StoreOrderLineItem[];
   order_date: string;
+  delivery_fee: number | null;
+  delivery_status: string | null;
 }
 
 interface StoreOrdersResponse {
@@ -56,6 +58,17 @@ const STATUS_COLORS: Record<string, string> = {
   ready: "bg-purple-900/30 text-purple-300 border-purple-700/40",
   delivered: "bg-primary/15 text-primary border-primary/25",
   cancelled: "bg-muted text-muted-foreground border-border",
+};
+
+const DELIVERY_STATUS_LABELS: Record<string, string> = {
+  quoted: "Not yet requested",
+  requested: "Requesting…",
+  confirmed: "Courier confirmed",
+  picked_up: "Picked up",
+  in_transit: "Out for delivery",
+  delivered: "Delivered",
+  failed: "Delivery failed — try again or arrange yourself",
+  cancelled: "Delivery cancelled",
 };
 
 const NEXT_STATUSES: Record<string, string[]> = {
@@ -94,12 +107,23 @@ interface OrderCardProps {
   order: StoreOrder;
   onStatusChange: (id: string, status: string) => void;
   isPending: boolean;
+  onRequestDelivery: (id: string) => void;
+  isRequestingDelivery: boolean;
 }
 
-function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
+function OrderCard({ order, onStatusChange, isPending, onRequestDelivery, isRequestingDelivery }: OrderCardProps) {
   const items = order.items;
   const badgeCls = STATUS_COLORS[order.status] ?? "bg-muted text-muted-foreground";
   const nextStatuses = NEXT_STATUSES[order.status] ?? [];
+
+  // A delivery_fee != null means the shopper chose delivery at checkout,
+  // not pickup. See SPEC_DELIVERY_DISPATCH.md §3.4 — dispatch is manual,
+  // and only legal once the order is packed ("ready").
+  const isDeliveryOrder = order.delivery_fee != null;
+  const canRequestDelivery =
+    isDeliveryOrder &&
+    order.status === "ready" &&
+    (order.delivery_status == null || order.delivery_status === "failed");
 
   return (
     <div className="rounded-xl border bg-card shadow-sm p-5 space-y-4">
@@ -150,6 +174,31 @@ function OrderCard({ order, onStatusChange, isPending }: OrderCardProps) {
           </span>
         )}
       </div>
+
+      {isDeliveryOrder && (
+        <div className="flex items-center justify-between gap-2 pt-1 border-t">
+          <span className="text-xs text-muted-foreground flex items-center gap-1.5">
+            <Truck className="h-3.5 w-3.5" />
+            {order.delivery_status
+              ? DELIVERY_STATUS_LABELS[order.delivery_status] ?? order.delivery_status
+              : "Delivery requested by shopper"}
+          </span>
+          {canRequestDelivery && (
+            <Button
+              size="sm"
+              variant="outline"
+              className="h-8 text-xs shrink-0"
+              disabled={isRequestingDelivery}
+              onClick={() => onRequestDelivery(order.id)}
+            >
+              {order.delivery_status === "failed" ? "Retry delivery" : "Request Delivery"}
+            </Button>
+          )}
+          {isDeliveryOrder && order.status !== "ready" && !order.delivery_status && (
+            <span className="text-xs text-muted-foreground italic">Mark ready to dispatch</span>
+          )}
+        </div>
+      )}
     </div>
   );
 }
@@ -175,6 +224,26 @@ export default function StoreOrders() {
     },
     onError: (err: any) => {
       toast({ title: "Update failed", description: err.message, variant: "destructive" });
+    },
+  });
+
+  const requestDeliveryMutation = useMutation({
+    mutationFn: (id: string) => apiRequest("POST", `/order/${id}/request-delivery`),
+    onSuccess: async (res) => {
+      const data = await res.json();
+      qc.invalidateQueries({ queryKey: ["/order/store-orders"] });
+      if (data.status === "failed") {
+        toast({
+          title: "Delivery request failed",
+          description: "Couldn't book a courier — you may need to arrange delivery yourself.",
+          variant: "destructive",
+        });
+      } else {
+        toast({ title: "Delivery requested", description: `Courier confirmed — ${formatPrice(data.quoted_fee)}` });
+      }
+    },
+    onError: (err: any) => {
+      toast({ title: "Could not request delivery", description: err.message, variant: "destructive" });
     },
   });
 
@@ -258,6 +327,8 @@ export default function StoreOrders() {
               order={order}
               onStatusChange={(id, s) => statusMutation.mutate({ id, status: s })}
               isPending={statusMutation.isPending}
+              onRequestDelivery={(id) => requestDeliveryMutation.mutate(id)}
+              isRequestingDelivery={requestDeliveryMutation.isPending}
             />
           ))}
         </div>
