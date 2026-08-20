@@ -37,6 +37,10 @@
   --sidebar-accent-foreground: 93 16% 25%;
   --sidebar-border: 40 36% 84%;
   --sidebar-ring: 21 63% 47%;
+  --surface-dark: 220 30% 18%;
+  --surface-dark-foreground: 40 45% 94%;
+  --surface-dark-panel: 220 25% 24%;
+  --surface-dark-muted: 220 15% 55%;
 }
 
 /* Night-market palette — deep navy + warm amber (dark mode) */
@@ -73,6 +77,10 @@
   --sidebar-accent-foreground: 38 40% 75%;
   --sidebar-border: 224 28% 18%;
   --sidebar-ring: 38 92% 50%;
+  --surface-dark: 224 47% 10%;
+  --surface-dark-foreground: 38 55% 94%;
+  --surface-dark-panel: 224 38% 14%;
+  --surface-dark-muted: 220 18% 52%;
 }
 
 @layer base {
@@ -81,6 +89,28 @@
   }
   body {
     @apply font-sans antialiased bg-background text-foreground;
+    background-image:
+      radial-gradient(
+        1100px 620px at 12% -8%,
+        hsl(var(--primary) / 16%),
+        transparent 62%
+      ),
+      radial-gradient(
+        900px 520px at 92% 4%,
+        hsl(var(--accent) / 22%),
+        transparent 60%
+      ),
+      radial-gradient(
+        1000px 700px at 50% 108%,
+        hsl(var(--chart-3) / 14%),
+        transparent 65%
+      );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
+  }
+
+  ::selection {
+    background-color: hsl(var(--primary) / 20%);
   }
 }
 
@@ -189,4 +219,19 @@
 
 .groceror-marker {
   cursor: pointer;
+}
+
+/* ── Fade-up entrance animation (mercantile landing) ─ */
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+.animate-fade-up {
+  animation: fade-up 0.8s cubic-bezier(0.19, 1, 0.22, 1) both;
 }
