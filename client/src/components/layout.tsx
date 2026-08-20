@@ -44,6 +44,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
 
   return (
     <div className="min-h-screen bg-background">
+      {location !== "/" && (
       <header className="sticky top-0 z-40 bg-background border-b border-border">
         <div className="container mx-auto px-4 h-16 flex items-center justify-between gap-4">
 
@@ -253,6 +254,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+      )}
 
       <main className={location === "/" ? "" : "container mx-auto px-4 py-8"}>
         {children}
