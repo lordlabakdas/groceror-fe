@@ -21,8 +21,10 @@
     <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
     <script>
       (function () {
+        // Default to light rather than following prefers-color-scheme —
+        // mirrors getInitialTheme() in lib/theme-context.tsx.
         var stored = localStorage.getItem("groceror_theme");
-        var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var dark = stored === "dark";
         document.documentElement.classList.toggle("dark", dark);
       })();
     </script>
