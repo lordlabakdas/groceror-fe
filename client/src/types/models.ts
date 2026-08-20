@@ -56,3 +56,38 @@ export interface CartItem {
   quantity: number;
   addedAt: string;
 }
+
+// Shape returned by GET /subscription/status. See SPEC_SUBSCRIPTION.md §4.
+export type SubscriptionStatusValue = "trialing" | "active" | "grace" | "locked" | "cancelled";
+
+export interface SubscriptionStatus {
+  status: SubscriptionStatusValue;
+  plan_price_paise: number;
+  trial_end: string;
+  current_period_end: string | null;
+  grace_period_end: string | null;
+  razorpay_subscription_id: string | null;
+  checkout_needed: boolean;
+}
+
+export interface AdminSubscriptionRow {
+  store_id: string;
+  store_name: string;
+  status: SubscriptionStatusValue;
+  plan_price_paise: number | null;
+  current_period_end: string | null;
+}
+
+export interface AdminSubscriptionListResponse {
+  subscriptions: AdminSubscriptionRow[];
+  mrr_paise: number;
+}
+
+export interface SubscriptionInvoice {
+  id: string;
+  amount_paise: number;
+  status: "paid" | "failed";
+  period_start: string;
+  period_end: string;
+  paid_at: string | null;
+}

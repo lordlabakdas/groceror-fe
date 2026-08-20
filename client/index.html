@@ -7,6 +7,12 @@
     <meta name="description" content="Groceror is the all-in-one platform for grocers and shoppers — manage inventory, browse fresh products, and check out in seconds." />
     <link rel="icon" type="image/png" href="/logo.png" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Razorpay Checkout widget — not an npm package, expected as a global (window.Razorpay).
+         `defer` deliberately: an unqualified <script src> here blocks HTML parsing until this
+         third-party resource loads (or times out), hanging the entire app if Razorpay's CDN is
+         slow or unreachable — for a script only one page (billing.tsx) actually needs. See
+         SPEC_SUBSCRIPTION.md §3.4. -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
     <script>
       (function () {
         var stored = localStorage.getItem("groceror_theme");
