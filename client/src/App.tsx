@@ -29,6 +29,8 @@ import FollowingPage from "@/pages/following";
 import StockAlertsPage from "@/pages/stock-alerts";
 import FlashSalesPage from "@/pages/flash-sales";
 import BackInStockPage from "@/pages/back-in-stock";
+import Billing from "@/pages/billing";
+import AdminBilling from "@/pages/admin-billing";
 
 function ProtectedRoute({ component: Component }: { component: () => JSX.Element }) {
   const { user } = useAuth();
@@ -73,6 +75,11 @@ function Router() {
       <Route path="/bulk-rules">{() => <StoreOwnerRoute component={BulkRulesPage} />}</Route>
       <Route path="/coupons">{() => <StoreOwnerRoute component={CouponsPage} />}</Route>
       <Route path="/delivery-zone">{() => <StoreOwnerRoute component={DeliveryZonePage} />}</Route>
+      <Route path="/billing">{() => <StoreOwnerRoute component={Billing} />}</Route>
+      {/* Internal ops tool, not part of either customer-facing role — gated by
+          its own X-Admin-Token prompt, not StoreOwnerRoute/BuyerRoute.
+          Deliberately unlinked from Layout's nav. See SPEC_SUBSCRIPTION.md §5. */}
+      <Route path="/admin/billing" component={AdminBilling} />
       <Route component={NotFound} />
     </Switch>
   );

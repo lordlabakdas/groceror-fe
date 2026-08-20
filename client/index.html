@@ -13,10 +13,18 @@
       href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,500;0,600;1,600&family=Inter:wght@400;500;600&family=JetBrains+Mono&display=swap"
     />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Razorpay Checkout widget — not an npm package, expected as a global (window.Razorpay).
+         `defer` deliberately: an unqualified <script src> here blocks HTML parsing until this
+         third-party resource loads (or times out), hanging the entire app if Razorpay's CDN is
+         slow or unreachable — for a script only one page (billing.tsx) actually needs. See
+         SPEC_SUBSCRIPTION.md §3.4. -->
+    <script src="https://checkout.razorpay.com/v1/checkout.js" defer></script>
     <script>
       (function () {
+        // Default to light rather than following prefers-color-scheme —
+        // mirrors getInitialTheme() in lib/theme-context.tsx.
         var stored = localStorage.getItem("groceror_theme");
-        var dark = stored ? stored === "dark" : window.matchMedia("(prefers-color-scheme: dark)").matches;
+        var dark = stored === "dark";
         document.documentElement.classList.toggle("dark", dark);
       })();
     </script>

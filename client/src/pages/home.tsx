@@ -1,7 +1,9 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
+import { Sun, Moon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
 
 const MERCHANT_FEATURES = [
   {
@@ -47,6 +49,7 @@ const STEPS = [
 
 export default function Home() {
   const { user, openLogin } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [, setLocation] = useLocation();
 
   useEffect(() => {
@@ -71,6 +74,14 @@ export default function Home() {
             </div>
           </div>
           <div className="flex items-center gap-4">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={toggleTheme}
+              aria-label={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+            >
+              {theme === "dark" ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
             <Button variant="ghost" onClick={() => openLogin("login")}>
               Log in
             </Button>

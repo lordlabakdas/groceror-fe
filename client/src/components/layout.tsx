@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap, Sun, Moon } from "lucide-react";
+import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap, Sun, Moon, CreditCard } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
@@ -10,6 +10,7 @@ import { ProfileSheet } from "@/components/profile-sheet";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useOrderAlerts } from "@/hooks/use-order-alerts";
 import { useSSE } from "@/hooks/use-sse";
+import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuery } from "@tanstack/react-query";
 
@@ -41,6 +42,26 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Chime + toast + browser notification when a new order lands.
   useOrderAlerts(user?.entityType === "store");
   useSSE();
+
+  // Subscription lock/grace banner (SPEC_SUBSCRIPTION.md §3.2) — store owners only.
+  const { data: subscription } = useSubscriptionStatus(user?.entityType === "store");
+  const billingWarning =
+    subscription?.status === "locked"
+      ? {
+          tone: "destructive" as const,
+          message:
+            "Your Groceror subscription payment is past due. Your store is hidden from shoppers until this is resolved.",
+        }
+      : subscription?.status === "grace"
+        ? {
+            tone: "warning" as const,
+            message: `Payment issue with your Groceror subscription — resolve by ${
+              subscription.grace_period_end
+                ? new Date(subscription.grace_period_end).toLocaleDateString()
+                : "soon"
+            } to avoid your store going offline.`,
+          }
+        : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -91,6 +112,11 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
                     <Link href="/disputes">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/disputes", location, true)}>Disputes</a>
+                    </Link>
+                    <Link href="/billing">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/billing", location, true)}>
+                        Billing {billingWarning && "⚠"}
+                      </a>
                     </Link>
                   </nav>
                 )}
@@ -174,6 +200,13 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 <Link href="/flash-sales"><a className={`${navCls("/flash-sales", location)} flex items-center gap-1`}><Zap className="h-3 w-3" />Flash</a></Link>
                 <Link href="/delivery-zone"><a className={navCls("/delivery-zone", location)}>Zone</a></Link>
                 <Link href="/disputes"><a className={navCls("/disputes", location)}>Disputes</a></Link>
+                <Link href="/billing">
+                  <a className={`${navCls("/billing", location)} flex items-center gap-1`}>
+                    <CreditCard className="h-3 w-3" />
+                    Billing
+                    {billingWarning && <span className="text-destructive">⚠</span>}
+                  </a>
+                </Link>
               </nav>
             )}
             {user?.entityType === "user" && (
@@ -254,6 +287,21 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
+      )}
+
+      {billingWarning && location !== "/billing" && (
+        <div
+          className={`px-4 py-2 text-sm text-center font-medium ${
+            billingWarning.tone === "destructive"
+              ? "bg-destructive text-destructive-foreground"
+              : "bg-amber-500/90 text-black"
+          }`}
+        >
+          {billingWarning.message}{" "}
+          <Link href="/billing">
+            <a className="underline underline-offset-2">Go to Billing</a>
+          </Link>
+        </div>
       )}
 
       <main className={location === "/" ? "" : "container mx-auto px-4 py-8"}>
