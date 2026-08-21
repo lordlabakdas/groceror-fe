@@ -98,7 +98,7 @@ export default function FlashSales() {
   const canCreate = inventoryId && salePrice && parseFloat(salePrice) > 0 && (!selectedItem || parseFloat(salePrice) < selectedItem.price);
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Zap className="h-5 w-5 text-amber-400" />

@@ -48,7 +48,7 @@ export default function StockAlerts() {
   }
 
   return (
-    <div className="space-y-6 max-w-2xl">
+    <div className="max-w-2xl mx-auto space-y-6">
       <div className="flex items-center gap-2">
         <AlertTriangle className="h-5 w-5 text-amber-400" />
         <h1 className="text-2xl font-bold">Stock Alerts</h1>
