@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, BellOff, Check, Plus, Trash2 } from "lucide-react";
-import { useState } from "react";
+import { Bell, BellOff, Check, Plus, Search, Store, Trash2, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -15,6 +15,18 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { formatPrice } from "@/lib/currency";
+
+interface SearchResultItem {
+  id: string;
+  name: string;
+  price: number;
+  store_name: string;
+}
+
+interface SearchResponse {
+  query: string;
+  results: SearchResultItem[];
+}
 
 interface PriceAlert {
   id: string;
@@ -76,20 +88,36 @@ function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: strin
 
 function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
   const [open, setOpen] = useState(false);
-  const [inventoryId, setInventoryId] = useState("");
+  const [query, setQuery] = useState("");
+  const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [selectedItem, setSelectedItem] = useState<SearchResultItem | null>(null);
   const [targetPrice, setTargetPrice] = useState("");
   const { toast } = useToast();
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(query.trim()), 300);
+    return () => clearTimeout(t);
+  }, [query]);
+
+  const searchUrl = useMemo(() => {
+    if (selectedItem || debouncedQuery.length < 2) return null;
+    return `/inventory/search?q=${encodeURIComponent(debouncedQuery)}`;
+  }, [debouncedQuery, selectedItem]);
+
+  const { data, isFetching } = useQuery<SearchResponse>({
+    queryKey: [searchUrl],
+    enabled: searchUrl !== null,
+  });
+  const results = data?.results ?? [];
 
   const mutation = useMutation({
     mutationFn: () =>
       apiRequest("POST", "/price-alerts", {
-        inventory_id: inventoryId.trim(),
+        inventory_id: selectedItem!.id,
         target_price: parseFloat(targetPrice),
       }),
     onSuccess: () => {
-      setOpen(false);
-      setInventoryId("");
-      setTargetPrice("");
+      reset();
       onCreated();
       toast({ title: "Alert created", description: "We'll track this item's price for you." });
     },
@@ -102,8 +130,16 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
     },
   });
 
+  function reset() {
+    setOpen(false);
+    setQuery("");
+    setDebouncedQuery("");
+    setSelectedItem(null);
+    setTargetPrice("");
+  }
+
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={(v) => (v ? setOpen(true) : reset())}>
       <DialogTrigger asChild>
         <Button size="sm" className="gap-2">
           <Plus className="h-4 w-4" />
@@ -115,17 +151,75 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
           <DialogTitle>Set price alert</DialogTitle>
         </DialogHeader>
         <p className="text-sm text-muted-foreground -mt-2">
-          You can set alerts directly from a store's product page by clicking the bell icon on any item.
-          If you have the item's ID handy, enter it below.
+          You can also set alerts directly from a store's product page by clicking the bell icon on any item.
         </p>
         <div className="space-y-4 pt-2">
           <div className="space-y-1.5">
-            <Label>Item ID</Label>
-            <Input
-              placeholder="Paste inventory item ID"
-              value={inventoryId}
-              onChange={(e) => setInventoryId(e.target.value)}
-            />
+            <Label>Item</Label>
+            {selectedItem ? (
+              <div className="flex items-center gap-2 rounded-md border px-3 py-2">
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium truncate">{selectedItem.name}</p>
+                  <p className="text-xs text-muted-foreground flex items-center gap-1">
+                    <Store className="h-3 w-3" />
+                    {selectedItem.store_name} · {formatPrice(selectedItem.price)}
+                  </p>
+                </div>
+                <Button
+                  size="icon"
+                  variant="ghost"
+                  className="h-6 w-6 flex-shrink-0"
+                  onClick={() => setSelectedItem(null)}
+                >
+                  <X className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ) : (
+              <div className="relative">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    autoFocus
+                    placeholder="Search for an item, e.g. bananas"
+                    value={query}
+                    onChange={(e) => setQuery(e.target.value)}
+                    className="pl-9"
+                  />
+                </div>
+                {debouncedQuery.length >= 2 && (
+                  <div className="mt-1.5 max-h-52 overflow-y-auto rounded-md border divide-y">
+                    {isFetching ? (
+                      <p className="px-3 py-2.5 text-sm text-muted-foreground">Searching…</p>
+                    ) : results.length === 0 ? (
+                      <p className="px-3 py-2.5 text-sm text-muted-foreground">
+                        No items found for &ldquo;{debouncedQuery}&rdquo;.
+                      </p>
+                    ) : (
+                      results.map((item) => (
+                        <button
+                          key={item.id}
+                          type="button"
+                          className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between gap-2"
+                          onClick={() => {
+                            setSelectedItem(item);
+                            setQuery("");
+                          }}
+                        >
+                          <div className="min-w-0">
+                            <p className="text-sm font-medium truncate">{item.name}</p>
+                            <p className="text-xs text-muted-foreground flex items-center gap-1">
+                              <Store className="h-3 w-3" />
+                              {item.store_name}
+                            </p>
+                          </div>
+                          <span className="text-sm font-semibold flex-shrink-0">{formatPrice(item.price)}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
           <div className="space-y-1.5">
             <Label>Target price (₹)</Label>
@@ -140,7 +234,7 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
           </div>
           <Button
             className="w-full"
-            disabled={!inventoryId || !targetPrice || mutation.isPending}
+            disabled={!selectedItem || !targetPrice || mutation.isPending}
             onClick={() => mutation.mutate()}
           >
             {mutation.isPending ? "Creating…" : "Create alert"}
