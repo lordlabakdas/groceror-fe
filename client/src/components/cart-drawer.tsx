@@ -114,10 +114,10 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
     const storeId = items[0].storeId;
     apiRequest("GET", `/inventory/browse/${storeId}`)
       .then((res) => res.json())
-      .then((data: { inventory: { id: string; price: number }[] }) => {
+      .then((data: { inventory: { id: string; price: number; sale_price?: number | null; flash_sale_price?: number | null }[] }) => {
         const priceMap: Record<string, number> = {};
         for (const inv of data.inventory) {
-          priceMap[inv.id] = inv.price;
+          priceMap[inv.id] = inv.flash_sale_price ?? inv.sale_price ?? inv.price;
         }
         const changed = items.filter(
           (i) => priceMap[i.id] !== undefined && priceMap[i.id] !== i.price

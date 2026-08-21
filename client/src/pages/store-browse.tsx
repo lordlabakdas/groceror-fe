@@ -668,6 +668,7 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
   if (!product) return null;
 
   const outOfStock = product.stock <= 0;
+  const effectivePrice = product.flashSalePrice ?? product.salePrice ?? null;
 
   return (
     <Dialog open={!!product} onOpenChange={(open) => !open && onClose()}>
@@ -689,13 +690,20 @@ function ProductDetailModal({ product, cartQuantity, onClose, onAdd, onIncrement
 
           <div className="flex items-center justify-between">
             <div>
-              {product.salePrice != null ? (
+              {effectivePrice != null ? (
                 <div className="flex items-baseline gap-2">
-                  <span className="text-2xl font-bold text-rose-400">{formatPrice(Number(product.salePrice))}</span>
+                  <span className={cn("text-2xl font-bold", product.flashSalePrice != null ? "text-amber-400" : "text-rose-400")}>
+                    {formatPrice(effectivePrice)}
+                  </span>
                   <span className="text-base line-through text-muted-foreground">{formatPrice(Number(product.price))}</span>
                 </div>
               ) : (
                 <span className="text-2xl font-bold text-primary">{formatPrice(Number(product.price))}</span>
+              )}
+              {product.flashSalePrice != null && product.flashSaleEndAt && (
+                <div className="flex items-center gap-1 mt-1 text-xs font-semibold text-amber-400">
+                  ⚡ <FlashCountdown endAt={product.flashSaleEndAt} />
+                </div>
               )}
             </div>
             <span className="text-sm text-muted-foreground">
