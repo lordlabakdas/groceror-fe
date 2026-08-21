@@ -39,6 +39,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
     enabled: user?.entityType === "user",
   });
 
+  // Feed unread count for the Following nav badge — shared cache key with the
+  // Following page's feed query, so use-sse.ts's invalidate on "store_update"
+  // refreshes this badge too.
+  const { data: feed } = useQuery<{ unread_count: number }>({
+    queryKey: ["/feed"],
+    enabled: user?.entityType === "user",
+  });
+
   // Chime + toast + browser notification when a new order lands.
   useOrderAlerts(user?.entityType === "store");
   useSSE();
@@ -143,7 +151,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/wishlist", location, true)}>Wishlist</a>
                     </Link>
                     <Link href="/following">
-                      <a onClick={() => setDrawerOpen(false)} className={navCls("/following", location, true)}>Following</a>
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/following", location, true)}>
+                        Following
+                        {!!feed?.unread_count && (
+                          <span className="ml-1.5 text-xs bg-primary text-primary-foreground rounded-full px-1.5 py-0 font-medium">
+                            {feed.unread_count}
+                          </span>
+                        )}
+                      </a>
                     </Link>
                     <Link href="/scheduled-orders">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/scheduled-orders", location, true)}>Recurring Orders</a>
@@ -227,7 +242,16 @@ export function Layout({ children }: { children: React.ReactNode }) {
                 </Link>
                 <Link href="/alerts"><a className={`${navCls("/alerts", location)} flex items-center gap-1`}><Bell className="h-3 w-3" />Alerts</a></Link>
                 <Link href="/wishlist"><a className={`${navCls("/wishlist", location)} flex items-center gap-1`}><Heart className="h-3 w-3" />Wishlist</a></Link>
-                <Link href="/following"><a className={`${navCls("/following", location)} flex items-center gap-1`}><Users className="h-3 w-3" />Following</a></Link>
+                <Link href="/following">
+                  <a className={`${navCls("/following", location)} flex items-center gap-1`}>
+                    <Users className="h-3 w-3" />Following
+                    {!!feed?.unread_count && (
+                      <span className="ml-0.5 text-xs bg-primary text-primary-foreground rounded-full px-1.5 py-0 font-medium">
+                        {feed.unread_count}
+                      </span>
+                    )}
+                  </a>
+                </Link>
                 <Link href="/scheduled-orders"><a className={`${navCls("/scheduled-orders", location)} flex items-center gap-1`}><CalendarClock className="h-3 w-3" />Recurring</a></Link>
                 <Link href="/back-in-stock"><a className={`${navCls("/back-in-stock", location)} flex items-center gap-1`}><Bell className="h-3 w-3" />Back</a></Link>
                 <Link href="/disputes"><a className={`${navCls("/disputes", location)} flex items-center gap-1`}><AlertTriangle className="h-3 w-3" />Disputes</a></Link>
