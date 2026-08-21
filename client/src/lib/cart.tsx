@@ -138,13 +138,15 @@ export function useAddToCart() {
       return;
     }
 
+    const effectivePrice = product.flashSalePrice ?? product.salePrice ?? parseFloat(product.price);
+
     dispatch({
       type: "ADD_ITEM",
       payload: {
         id: product.id,
         quantity,
         name: product.name,
-        price: parseFloat(product.price),
+        price: effectivePrice,
         storeId: product.storeId,
         storeName: product.storeName ?? "",
         imageUrl: product.imageUrl,
@@ -153,11 +155,13 @@ export function useAddToCart() {
     });
     toast({ title: "Added to cart", description: `${product.name} added to your cart` });
 
-    // Sync to groceror in the background; failures are non-fatal.
+    // Sync to groceror in the background; failures are non-fatal. The
+    // server re-derives the actual price server-side regardless of what's
+    // sent here — this is just for the request schema, not authoritative.
     apiRequest("POST", `/cart/${product.storeId}/items`, {
       inventory_id: product.id,
       quantity,
-      price: parseFloat(product.price),
+      price: effectivePrice,
     }).catch(() => {
       // Silently swallow — user may not be logged in or may not have a profile set yet.
     });
