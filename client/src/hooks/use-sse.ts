@@ -15,6 +15,7 @@ const BASE_URL = import.meta.env.VITE_API_URL || "";
  *   - delivery_status_update → invalidate /order/history + /order/store-orders + toast (both)
  *   - low_stock_alert        → invalidate /stock-alerts + toast (store)
  *   - back_in_stock          → invalidate /back-in-stock + toast (shopper)
+ *   - store_update           → invalidate /feed + toast (shopper, followed-store activity)
  *
  * Reconnects automatically (browser EventSource behaviour) with up to 3 retries
  * before giving up to avoid hammering a down server.
@@ -85,6 +86,15 @@ export function useSSE() {
         toast({
           title: "Back in stock",
           description: `${data.inventory_name} is available again!`,
+        });
+      });
+
+      es.addEventListener("store_update", (e) => {
+        const data = JSON.parse(e.data) as { store_id: string; store_name: string; update_type: string; message: string };
+        queryClient.invalidateQueries({ queryKey: ["/feed"] });
+        toast({
+          title: `New update from ${data.store_name}`,
+          description: data.message,
         });
       });
 

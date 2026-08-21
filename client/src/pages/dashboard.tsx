@@ -1,5 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
-import { type ReactNode } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import {
   AlertTriangle,
@@ -8,8 +8,12 @@ import {
   TrendingUp,
   Package,
   PackagePlus,
+  Megaphone,
+  Trash2,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
 import {
@@ -18,6 +22,8 @@ import {
   RevenueTrendChart,
 } from "@/components/dashboard-charts";
 import { formatPrice } from "@/lib/currency";
+import { apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -63,6 +69,13 @@ interface DashboardData {
   todays_summary: TodaysSummary;
   expiring_soon: ExpiringItem[];
   top_sellers: TopSellerItem[];
+}
+
+interface FeedPost {
+  id: string;
+  update_type: "coupon" | "promotion" | "flash_sale" | "announcement";
+  message: string;
+  created_at: string;
 }
 
 // ---------------------------------------------------------------------------
@@ -133,6 +146,98 @@ function Panel({
 function EmptyState({ message }: { message: string }) {
   return (
     <p className="text-sm text-muted-foreground text-center py-6">{message}</p>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Followers feed panel — post an announcement, see own recent activity
+// ---------------------------------------------------------------------------
+
+function StoreUpdatesPanel() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [message, setMessage] = useState("");
+
+  const { data: myStores } = useQuery<{ id: string }[]>({ queryKey: ["/stores/my-stores"] });
+  const storeId = myStores?.[0]?.id;
+  const updatesKey = `/stores/${storeId}/updates`;
+
+  const { data: updates } = useQuery<{ items: FeedPost[] }>({
+    queryKey: [updatesKey],
+    enabled: !!storeId,
+  });
+
+  const postMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest("POST", "/stores/updates", { message });
+    },
+    onSuccess: () => {
+      setMessage("");
+      queryClient.invalidateQueries({ queryKey: [updatesKey] });
+      toast({ description: "Posted to your followers' feed" });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/stores/updates/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [updatesKey] });
+    },
+  });
+
+  return (
+    <Panel
+      title="Followers Feed"
+      icon={<Megaphone className="h-4 w-4 text-primary" />}
+      borderColor="border-l-primary"
+    >
+      <form
+        className="flex gap-2 pb-2 mb-2 border-b"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (message.trim()) postMutation.mutate();
+        }}
+      >
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Post an update to your followers…"
+          maxLength={1000}
+          className="h-8 text-sm"
+        />
+        <Button type="submit" size="sm" disabled={!message.trim() || postMutation.isPending}>
+          Post
+        </Button>
+      </form>
+
+      {!updates || updates.items.length === 0 ? (
+        <EmptyState message="Coupons, promotions, and flash sales you create show up here automatically — or post an announcement above." />
+      ) : (
+        updates.items.map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
+            <div className="min-w-0 flex items-center gap-1.5">
+              <Badge variant="outline" className="text-xs flex-shrink-0 capitalize">
+                {item.update_type.replace("_", " ")}
+              </Badge>
+              <span className="truncate">{item.message}</span>
+            </div>
+            {item.update_type === "announcement" && (
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-6 w-6 flex-shrink-0 text-muted-foreground"
+                onClick={() => deleteMutation.mutate(item.id)}
+                disabled={deleteMutation.isPending}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            )}
+          </div>
+        ))
+      )}
+    </Panel>
   );
 }
 
@@ -373,6 +478,9 @@ export default function Dashboard() {
             ))
           )}
         </Panel>
+
+        {/* Followers Feed */}
+        <StoreUpdatesPanel />
 
       </div>
     </div>
