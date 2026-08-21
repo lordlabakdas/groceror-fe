@@ -83,7 +83,7 @@ export default function FlashSales() {
       setSalePrice(""); setInventoryId(""); setDuration("2");
       toast({ description: "Flash sale started" });
     },
-    onError: () => toast({ description: "Failed to create flash sale", variant: "destructive" }),
+    onError: (err: Error) => toast({ description: err.message || "Failed to create flash sale", variant: "destructive" }),
   });
 
   const cancelMutation = useMutation({
