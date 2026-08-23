@@ -75,7 +75,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setAuthToken(token);
     const decoded = decodeToken(token);
     setUser(decoded);
-    setLocation(decoded?.entityType === "store" ? "/dashboard" : "/stores");
+    // replace: true — mirrors Home's own redirect-when-authenticated (home.tsx)
+    // and the route guards' redirect-when-unauthenticated (App.tsx). Without it,
+    // the pre-login "/" stays in history under the post-login page; pressing
+    // back lands back on "/", which Home immediately replaces forward again,
+    // making back appear to do nothing.
+    setLocation(decoded?.entityType === "store" ? "/dashboard" : "/stores", { replace: true });
   }, [setLocation]);
 
   const logout = useCallback(() => {
@@ -83,7 +88,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     clearPersistedCart();
     setUser(null);
     queryClient.clear();
-    setLocation("/");
+    // replace: true — same reasoning as login() above: without it, back lands
+    // on the just-logged-out protected page, which the route guard immediately
+    // redirects away from again.
+    setLocation("/", { replace: true });
   }, [setLocation]);
 
   const openProfile = useCallback(() => setProfileOpen(true), []);
