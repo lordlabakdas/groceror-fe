@@ -198,7 +198,8 @@ export default function DeliveryZonePage() {
       () => {
         toast({ title: "Could not detect location", variant: "destructive" });
         setLocating(false);
-      }
+      },
+      { timeout: 10000, maximumAge: 60000 }
     );
   }
 

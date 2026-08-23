@@ -218,7 +218,8 @@ export default function Stores() {
           setLocating(false);
         }
       },
-      () => setLocating(false)
+      () => setLocating(false),
+      { timeout: 10000, maximumAge: 60000 }
     );
   }
 
