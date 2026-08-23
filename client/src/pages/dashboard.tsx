@@ -10,6 +10,7 @@ import {
   PackagePlus,
   Megaphone,
   Trash2,
+  Rocket,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -73,9 +74,28 @@ interface DashboardData {
 
 interface FeedPost {
   id: string;
-  update_type: "coupon" | "promotion" | "flash_sale" | "announcement";
+  update_type: "coupon" | "promotion" | "flash_sale" | "announcement" | "sponsored";
   message: string;
   created_at: string;
+}
+
+interface SponsoredPost {
+  id: string;
+  message: string;
+  amount_paise: number;
+  status: "pending" | "paid" | "failed";
+  created_at: string;
+  paid_at: string | null;
+}
+
+// Loaded via a <script> tag in client/index.html — Razorpay's Checkout
+// widget isn't an npm package, it's expected to be a global. Same
+// declaration as billing.tsx's (TS merges repeated `declare global` blocks
+// for the same interface as long as the shapes agree).
+declare global {
+  interface Window {
+    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -234,6 +254,136 @@ function StoreUpdatesPanel() {
                 <Trash2 className="h-3.5 w-3.5" />
               </Button>
             )}
+          </div>
+        ))
+      )}
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Sponsored posts panel — pay a one-time fee to reach every shopper's feed,
+// not just followers (SPEC_SPONSORED_POSTS.md)
+// ---------------------------------------------------------------------------
+
+const SPONSORED_STATUS_STYLES: Record<SponsoredPost["status"], string> = {
+  paid: "bg-emerald-500/10 text-emerald-500 border-emerald-500/30",
+  pending: "bg-amber-500/10 text-amber-500 border-amber-500/30",
+  failed: "bg-destructive/10 text-destructive border-destructive/30",
+};
+
+function SponsoredPostsPanel() {
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+  const [message, setMessage] = useState("");
+
+  const { data: history } = useQuery<{ items: SponsoredPost[] }>({
+    queryKey: ["/stores/sponsored-posts"],
+  });
+
+  const postMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", "/stores/sponsored-posts", { message });
+      return res.json() as Promise<{
+        sponsored_post_id: string;
+        razorpay_order_id: string;
+        amount_paise: number;
+        razorpay_key_id: string;
+      }>;
+    },
+    onSuccess: ({ sponsored_post_id, razorpay_order_id, amount_paise, razorpay_key_id }) => {
+      // The pending row exists now — show it even before checkout finishes.
+      queryClient.invalidateQueries({ queryKey: ["/stores/sponsored-posts"] });
+
+      if (typeof window.Razorpay !== "function") {
+        toast({
+          title: "Couldn't load payment widget",
+          description: "Refresh the page and try again.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      const rzp = new window.Razorpay({
+        key: razorpay_key_id,
+        order_id: razorpay_order_id,
+        amount: amount_paise,
+        currency: "INR",
+        name: "Groceror",
+        description: "Sponsored post",
+        handler: async (response: {
+          razorpay_payment_id: string;
+          razorpay_order_id: string;
+          razorpay_signature: string;
+        }) => {
+          try {
+            await apiRequest("POST", `/stores/sponsored-posts/${sponsored_post_id}/confirm`, {
+              razorpay_payment_id: response.razorpay_payment_id,
+              razorpay_order_id: response.razorpay_order_id,
+              razorpay_signature: response.razorpay_signature,
+            });
+            setMessage("");
+            queryClient.invalidateQueries({ queryKey: ["/stores/sponsored-posts"] });
+            toast({ description: "Sponsored post is live — every shopper on Groceror can now see it." });
+          } catch {
+            toast({
+              title: "Payment succeeded but the post couldn't be confirmed",
+              description: "Contact support with your payment ID — you won't be charged again.",
+              variant: "destructive",
+            });
+          }
+        },
+        theme: { color: "#f59e0b" },
+      });
+      rzp.open();
+    },
+    onError: (err: Error) => {
+      toast({ title: "Couldn't start checkout", description: err.message, variant: "destructive" });
+    },
+  });
+
+  return (
+    <Panel
+      title="Sponsored Posts"
+      icon={<Rocket className="h-4 w-4 text-amber-400" />}
+      borderColor="border-l-amber-400"
+    >
+      <form
+        className="flex gap-2 pb-1"
+        onSubmit={(e) => {
+          e.preventDefault();
+          if (message.trim()) postMutation.mutate();
+        }}
+      >
+        <Input
+          value={message}
+          onChange={(e) => setMessage(e.target.value)}
+          placeholder="Reach every shopper on Groceror…"
+          maxLength={1000}
+          className="h-8 text-sm"
+        />
+        <Button type="submit" size="sm" disabled={!message.trim() || postMutation.isPending}>
+          {postMutation.isPending ? "Starting…" : "Post & Pay"}
+        </Button>
+      </form>
+      <p className="text-xs text-muted-foreground pb-2 mb-2 border-b">
+        Reaches every shopper, not just your followers. You'll see the price before you pay — no refunds once it's live.
+      </p>
+
+      {!history || history.items.length === 0 ? (
+        <EmptyState message="Sponsored posts you buy show up here." />
+      ) : (
+        history.items.map((item) => (
+          <div key={item.id} className="flex items-center justify-between gap-2 text-sm py-1">
+            <div className="min-w-0 flex items-center gap-1.5">
+              <Badge variant="outline" className={`text-xs flex-shrink-0 capitalize ${SPONSORED_STATUS_STYLES[item.status]}`}>
+                {item.status}
+              </Badge>
+              <span className="truncate">{item.message}</span>
+            </div>
+            <span className="text-xs text-muted-foreground flex-shrink-0 tabular-nums">
+              {formatPrice(item.amount_paise / 100)}
+            </span>
           </div>
         ))
       )}
@@ -481,6 +631,9 @@ export default function Dashboard() {
 
         {/* Followers Feed */}
         <StoreUpdatesPanel />
+
+        {/* Sponsored Posts */}
+        <SponsoredPostsPanel />
 
       </div>
     </div>

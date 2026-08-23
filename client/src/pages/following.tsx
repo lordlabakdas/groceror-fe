@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Users, Store, UserMinus, Tag, Percent, Zap, Megaphone, Bookmark, BookmarkCheck } from "lucide-react";
+import { Users, Store, UserMinus, Tag, Percent, Zap, Megaphone, Bookmark, BookmarkCheck, Rocket } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -25,7 +25,7 @@ interface FeedItem {
   id: string;
   store_id: string;
   store_name: string;
-  update_type: "coupon" | "promotion" | "flash_sale" | "announcement";
+  update_type: "coupon" | "promotion" | "flash_sale" | "announcement" | "sponsored";
   message: string;
   ref_id: string | null;
   created_at: string;
@@ -42,6 +42,7 @@ const UPDATE_ICONS = {
   promotion: Percent,
   flash_sale: Zap,
   announcement: Megaphone,
+  sponsored: Rocket,
 } as const;
 
 export default function Following() {
@@ -160,10 +161,13 @@ export default function Following() {
                       <Icon className="h-4 w-4" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-2 flex-wrap">
                         <Link href={`/stores/${item.store_id}`}>
                           <a className="text-sm font-semibold hover:underline">{item.store_name}</a>
                         </Link>
+                        {item.update_type === "sponsored" && (
+                          <Badge className="text-xs bg-amber-500/15 text-amber-500 border-amber-500/30">Sponsored</Badge>
+                        )}
                         <span className="text-xs text-muted-foreground">
                           {formatDistanceToNow(new Date(item.created_at), { addSuffix: true })}
                         </span>
