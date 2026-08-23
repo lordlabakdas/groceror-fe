@@ -676,21 +676,21 @@ export default function Inventory() {
       {/* stats */}
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <StatCard
-          gradient="bg-gradient-to-br from-violet-500 to-purple-600"
+          gradient="bg-gradient-to-br from-[#c1592f] to-[#8a3a1f]"
           icon={<Package className="h-4 w-4 text-white" />}
           label="Total SKUs"
           value={items.length}
           sub={`${lowStockCount} low stock`}
         />
         <StatCard
-          gradient="bg-gradient-to-br from-teal-500 to-cyan-600"
+          gradient="bg-gradient-to-br from-[#6b7a35] to-[#414d1e]"
           icon={<BarChart3 className="h-4 w-4 text-white" />}
           label="Total Units"
           value={totalUnits.toLocaleString()}
           sub={totalWeightKg > 0 ? `+ ${totalWeightKg.toFixed(1)}kg tracked by weight` : "across all items"}
         />
         <StatCard
-          gradient="bg-gradient-to-br from-amber-500 to-orange-500"
+          gradient="bg-gradient-to-br from-[#d9a441] to-[#c1592f]"
           icon={<DollarSign className="h-4 w-4 text-white" />}
           label="Inventory Value"
           value={formatPrice(totalValue)}
