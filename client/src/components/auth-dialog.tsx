@@ -41,7 +41,8 @@ type AuthView =
   | "register_otp"      // Step 2: verify OTP
   | "register_password" // Step 3: set password → complete registration
   | "forgot_phone"      // Forgot PW step 1: enter phone
-  | "forgot_otp";       // Forgot PW step 2: verify OTP
+  | "forgot_otp"        // Forgot PW step 2: enter OTP
+  | "forgot_password";  // Forgot PW step 3: set new password
 
 const TITLES: Record<AuthView, string> = {
   login: "Welcome Back",
@@ -50,6 +51,7 @@ const TITLES: Record<AuthView, string> = {
   register_password: "Set a Password",
   forgot_phone: "Reset Password",
   forgot_otp: "Enter Verification Code",
+  forgot_password: "Set a New Password",
 };
 
 export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", defaultEntityType = "user" }: AuthDialogProps) {
@@ -184,25 +186,37 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
     }
   }
 
-  // ---- Forgot password step 2: verify OTP -------------------------------------
-  // Groceror's change-password endpoint requires an active JWT, so a full
-  // unauthenticated reset flow needs a backend endpoint.  For now we verify
-  // identity via OTP and ask the user to log in then update their password.
+  // ---- Forgot password step 2: enter OTP, move on -----------------------------
+  // Deliberately does NOT call /user/verify-otp here: that endpoint clears
+  // the OTP on success, and step 3 (the actual reset) needs this same code
+  // to still be valid when it calls /user/reset-password. The code itself
+  // gets validated server-side, once, at that final step.
 
-  async function handleForgotVerifyOtp(e: React.FormEvent) {
+  function handleForgotContinue(e: React.FormEvent) {
+    e.preventDefault();
+    setFormError(null);
+    switchView("forgot_password");
+  }
+
+  // ---- Forgot password step 3: set new password + auto-login ------------------
+
+  async function handleForgotResetPassword(e: React.FormEvent) {
     e.preventDefault();
     setIsLoading(true);
     setFormError(null);
     try {
-      await apiRequest("POST", "/user/verify-otp", { phone, otp });
-      toast({
-        title: "Identity verified",
-        description:
-          "Please log in with your current password and update it from account settings.",
+      await apiRequest("POST", "/user/reset-password", {
+        phone,
+        otp,
+        new_password: password,
       });
-      setOtp("");
-      setPhone("");
-      switchView("login");
+      // Auto-login, same as registration — the user has no old password to
+      // fall back to, so there's no "log in with your current password" step.
+      const loginRes = await apiRequest("POST", "/user/login", { phone, password });
+      const { token } = await loginRes.json();
+      login(token);
+      toast({ title: "Password reset", description: "You're now logged in with your new password." });
+      resetAndClose();
     } catch (err) {
       setFormError(friendlyError(err, { 400: WRONG_CODE, 401: WRONG_CODE }));
     } finally {
@@ -245,7 +259,7 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
                 type="button"
                 variant="link"
                 className="px-0 font-normal"
-                onClick={() => { setPhone(""); switchView("forgot_phone"); }}
+                onClick={() => { setPhone(""); setPassword(""); switchView("forgot_phone"); }}
               >
                 Forgot password?
               </Button>
@@ -398,9 +412,9 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
           </form>
         )}
 
-        {/* ---- FORGOT PASSWORD STEP 2: verify OTP --------------------------- */}
+        {/* ---- FORGOT PASSWORD STEP 2: enter OTP ---------------------------- */}
         {view === "forgot_otp" && (
-          <form onSubmit={handleForgotVerifyOtp} className="space-y-4">
+          <form onSubmit={handleForgotContinue} className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Enter the 6-digit code sent to <strong>{phone}</strong>.
             </p>
@@ -419,8 +433,38 @@ export function AuthDialog({ isOpen, onOpenChange, defaultTab = "login", default
               <Button type="button" variant="ghost" onClick={() => switchView("forgot_phone")}>
                 Back
               </Button>
-              <Button type="submit" disabled={isLoading || otp.length < 6}>
-                {isLoading ? "Verifying…" : "Verify"}
+              <Button type="submit" disabled={otp.length < 6}>
+                Continue
+              </Button>
+            </div>
+          </form>
+        )}
+
+        {/* ---- FORGOT PASSWORD STEP 3: set new password --------------------- */}
+        {view === "forgot_password" && (
+          <form onSubmit={handleForgotResetPassword} className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Choose a new password for <strong>{phone}</strong>.
+            </p>
+            <div className="space-y-2">
+              <Label htmlFor="forgot-new-password">New Password</Label>
+              <Input
+                id="forgot-new-password"
+                type="password"
+                placeholder="Create a new password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+              />
+              <PasswordStrength password={password} />
+            </div>
+            <FormError message={formError} />
+            <div className="flex justify-between">
+              <Button type="button" variant="ghost" onClick={() => switchView("forgot_otp")}>
+                Back
+              </Button>
+              <Button type="submit" disabled={isLoading}>
+                {isLoading ? "Resetting…" : "Reset Password"}
               </Button>
             </div>
           </form>
