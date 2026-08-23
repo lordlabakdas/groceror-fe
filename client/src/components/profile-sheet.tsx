@@ -14,6 +14,7 @@ import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { apiRequest } from "@/lib/queryClient";
+import { PasswordStrength } from "./password-strength";
 import { LogOut, Pencil, X, KeyRound, Check } from "lucide-react";
 
 interface MeResponse {
@@ -91,6 +92,8 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
   // ── change password state ─────────────────────────────────
   const [changingPw, setChangingPw] = useState(false);
   const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const passwordsMismatch = confirmPassword.length > 0 && newPassword !== confirmPassword;
 
   const pwMutation = useMutation({
     mutationFn: () =>
@@ -99,6 +102,7 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
       toast({ title: "Password changed" });
       setChangingPw(false);
       setNewPassword("");
+      setConfirmPassword("");
     },
     onError: (err: any) => {
       toast({ title: "Failed", description: err.message, variant: "destructive" });
@@ -247,19 +251,33 @@ export function ProfileSheet({ open, onClose }: ProfileSheetProps) {
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
                   />
+                  <PasswordStrength password={newPassword} />
+                </div>
+                <div className="space-y-1">
+                  <Label htmlFor="confirm-pw" className="text-sm">Confirm New Password</Label>
+                  <Input
+                    id="confirm-pw"
+                    type="password"
+                    placeholder="Re-enter new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                  />
+                  {passwordsMismatch && (
+                    <p className="text-xs text-destructive">Passwords don't match</p>
+                  )}
                 </div>
                 <div className="flex gap-2">
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => { setChangingPw(false); setNewPassword(""); }}
+                    onClick={() => { setChangingPw(false); setNewPassword(""); setConfirmPassword(""); }}
                   >
                     Cancel
                   </Button>
                   <Button
                     size="sm"
                     onClick={() => pwMutation.mutate()}
-                    disabled={!newPassword || pwMutation.isPending}
+                    disabled={!newPassword || newPassword !== confirmPassword || pwMutation.isPending}
                   >
                     {pwMutation.isPending ? "Saving…" : "Update Password"}
                   </Button>
