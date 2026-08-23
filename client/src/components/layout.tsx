@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
-import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap, Sun, Moon, CreditCard } from "lucide-react";
+import { ShoppingCart, Menu, User, Star, Bell, AlertTriangle, Heart, CalendarClock, Users, PackageSearch, Zap, Sun, Moon, CreditCard, Bookmark } from "lucide-react";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { useCart } from "@/lib/cart";
@@ -160,6 +160,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
                         )}
                       </a>
                     </Link>
+                    <Link href="/my-deals">
+                      <a onClick={() => setDrawerOpen(false)} className={navCls("/my-deals", location, true)}>My Deals</a>
+                    </Link>
                     <Link href="/scheduled-orders">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/scheduled-orders", location, true)}>Recurring Orders</a>
                     </Link>
@@ -252,6 +255,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     )}
                   </a>
                 </Link>
+                <Link href="/my-deals"><a className={`${navCls("/my-deals", location)} flex items-center gap-1`}><Bookmark className="h-3 w-3" />My Deals</a></Link>
                 <Link href="/scheduled-orders"><a className={`${navCls("/scheduled-orders", location)} flex items-center gap-1`}><CalendarClock className="h-3 w-3" />Recurring</a></Link>
                 <Link href="/back-in-stock"><a className={`${navCls("/back-in-stock", location)} flex items-center gap-1`}><Bell className="h-3 w-3" />Back</a></Link>
                 <Link href="/disputes"><a className={`${navCls("/disputes", location)} flex items-center gap-1`}><AlertTriangle className="h-3 w-3" />Disputes</a></Link>
