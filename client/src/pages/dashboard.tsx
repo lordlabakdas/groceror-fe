@@ -123,15 +123,15 @@ function KpiCard({
   value: string | number;
   color: "red" | "green" | "amber";
 }) {
-  const colorCls = {
-    red: "bg-red-900/20 border-red-800/40 text-red-400",
-    green: "bg-primary/15 border-primary/25 text-primary",
-    amber: "bg-amber-900/20 border-amber-800/40 text-amber-400",
+  const gradientCls = {
+    red: "from-[#c1592f] to-[#8a3a1f]",
+    green: "from-[#6b7a35] to-[#414d1e]",
+    amber: "from-[#d9a441] to-[#c1592f]",
   }[color];
 
   return (
-    <div className={`rounded-xl border px-4 py-3 ${colorCls}`}>
-      <p className="text-xs font-medium uppercase tracking-wide opacity-70">{label}</p>
+    <div className={`rounded-2xl bg-gradient-to-br ${gradientCls} text-white px-4 py-3 shadow-sm`}>
+      <p className="text-xs font-medium uppercase tracking-wide text-white/70">{label}</p>
       <p className="text-2xl font-bold mt-0.5">{value}</p>
     </div>
   );
