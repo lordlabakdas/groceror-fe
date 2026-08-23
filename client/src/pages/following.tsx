@@ -2,12 +2,16 @@ import { useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { formatDistanceToNow } from "date-fns";
-import { Users, Store, UserMinus, Tag, Percent, Zap, Megaphone } from "lucide-react";
+import { Users, Store, UserMinus, Tag, Percent, Zap, Megaphone, Bookmark, BookmarkCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import type { MyDealsResponse } from "@/pages/my-deals";
+
+// A deal can be saved to My Deals — announcements can't (nothing to bookmark).
+const SAVEABLE_TYPES = new Set(["coupon", "promotion", "flash_sale"]);
 
 interface FollowedStore {
   store_id: string;
@@ -50,6 +54,23 @@ export default function Following() {
 
   const { data: feed, isLoading: feedLoading } = useQuery<FeedResponse>({
     queryKey: ["/feed"],
+  });
+
+  // Which feed posts are already saved to My Deals — one bulk fetch rather
+  // than a per-item GET /feed/{id}/saved call for every deal in the feed.
+  const { data: myDeals } = useQuery<MyDealsResponse>({
+    queryKey: ["/my-deals"],
+  });
+  const savedFeedPostIds = new Set((myDeals?.items ?? []).map((d) => d.feed_post_id));
+
+  const saveDealMutation = useMutation({
+    mutationFn: async ({ feedPostId, isSaved }: { feedPostId: string; isSaved: boolean }) => {
+      await apiRequest(isSaved ? "DELETE" : "POST", `/feed/${feedPostId}/save`);
+    },
+    onSuccess: (_data, { isSaved }) => {
+      queryClient.invalidateQueries({ queryKey: ["/my-deals"] });
+      toast({ description: isSaved ? "Removed from My Deals" : "Saved to My Deals" });
+    },
   });
 
   const markReadMutation = useMutation({
@@ -130,6 +151,9 @@ export default function Following() {
             <div className="space-y-3">
               {feed.items.map((item) => {
                 const Icon = UPDATE_ICONS[item.update_type];
+                const saveable = SAVEABLE_TYPES.has(item.update_type);
+                const isSaved = savedFeedPostIds.has(item.id);
+                const SaveIcon = isSaved ? BookmarkCheck : Bookmark;
                 return (
                   <div key={item.id} className="flex items-start gap-3 p-4 rounded-xl border bg-card">
                     <div className="w-9 h-9 rounded-full flex-shrink-0 flex items-center justify-center bg-primary/10 text-primary">
@@ -146,6 +170,18 @@ export default function Following() {
                       </div>
                       <p className="text-sm mt-0.5">{item.message}</p>
                     </div>
+                    {saveable && (
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className={`flex-shrink-0 h-8 w-8 ${isSaved ? "text-primary" : "text-muted-foreground"}`}
+                        onClick={() => saveDealMutation.mutate({ feedPostId: item.id, isSaved })}
+                        disabled={saveDealMutation.isPending}
+                        aria-label={isSaved ? "Remove from My Deals" : "Save to My Deals"}
+                      >
+                        <SaveIcon className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 );
               })}

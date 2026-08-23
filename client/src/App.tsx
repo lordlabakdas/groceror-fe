@@ -26,6 +26,7 @@ import DisputesPage from "@/pages/disputes";
 import WishlistPage from "@/pages/wishlist";
 import ScheduledOrdersPage from "@/pages/scheduled-orders";
 import FollowingPage from "@/pages/following";
+import MyDealsPage from "@/pages/my-deals";
 import StockAlertsPage from "@/pages/stock-alerts";
 import FlashSalesPage from "@/pages/flash-sales";
 import BackInStockPage from "@/pages/back-in-stock";
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/wishlist">{() => <BuyerRoute component={WishlistPage} />}</Route>
       <Route path="/scheduled-orders">{() => <BuyerRoute component={ScheduledOrdersPage} />}</Route>
       <Route path="/following">{() => <BuyerRoute component={FollowingPage} />}</Route>
+      <Route path="/my-deals">{() => <BuyerRoute component={MyDealsPage} />}</Route>
       <Route path="/stock-alerts">{() => <StoreOwnerRoute component={StockAlertsPage} />}</Route>
       <Route path="/flash-sales">{() => <StoreOwnerRoute component={FlashSalesPage} />}</Route>
       <Route path="/back-in-stock">{() => <BuyerRoute component={BackInStockPage} />}</Route>
