@@ -19,7 +19,11 @@ npm run db:push       # Push Drizzle schema changes to the database
 
 ## Development Workflow
 
-Prefer a git worktree over editing directly in this checkout for any non-trivial change (new features, anything that leaves the app in a broken intermediate state across multiple commits). Create one on its own branch — e.g. `git worktree add ../groceror-fe-<feature> -b <feature-branch>` — do the work there, and merge/push to `main` once it's ready. Trivial one-off fixes (typos, single-line corrections) can still go straight to `main` in the main checkout.
+Never commit directly to `main`, even for trivial one-off fixes. Always create a git worktree on its own branch — e.g. `git worktree add ../groceror-fe-<feature> -b <feature-branch>` — do the work there, and open a PR into `main` once it's ready.
+
+### Cross-repo changes
+
+A feature that touches both this repo and the [groceror](https://github.com/lordlabakdas/groceror) backend (new/changed endpoint + the FE code that consumes it) gets one PR per repo, not a combined change in one. Cross-link them in each PR's description, and land the backend PR first — the FE PR then depends on a real, already-existing endpoint rather than one that only exists in a branch.
 
 ## Environment
 
@@ -31,6 +35,8 @@ DATABASE_URL=<postgres connection>   # only needed for db:push
 ```
 
 `envDir` in `vite.config.ts` is set to the project root so Vite picks up `.env` even though its `root` is `client/`.
+
+To manually click through an OTP login against a local backend (not the Playwright e2e flow, which has its own SQLite-backed OTP retrieval — see Testing below), point `VITE_API_URL` at that local backend and leave `TWILIO_ACCOUNT_SID`/`TWILIO_AUTH_TOKEN` unset in *its* `.env`: the backend's `send_sms` helper falls back to printing `[SMS fallback] OTP for <phone>: ...` to its own stdout instead of sending a real SMS, so the OTP is right there in the backend's terminal.
 
 ## Architecture
 
@@ -85,13 +91,11 @@ All UI primitives are shadcn/ui components in `client/src/components/ui/`. The t
 
 ### Groceror API endpoints (external backend)
 
+The backend has grown well past auth/inventory/cart/orders — it now also serves price-alerts, wishlist, product-reviews, delivery-zones, stock-alerts, store-follow, loyalty, coupons, disputes, and more (one router per domain under `groceror/api/*_api.py`). Rather than hand-maintain a full list here that goes stale the moment a router changes, check the backend's own auto-generated docs — `<VITE_API_URL>/docs` (e.g. `https://groceror.fly.dev/docs`) — for the authoritative, current endpoint set, or grep `api/*_api.py` in the backend repo directly.
+
+The auth flow below is the one exception worth keeping inline, since almost every page depends on it:
+
 Auth: `POST /user/send-otp`, `POST /user/verify-otp`, `POST /user/register`, `POST /user/login`
-
-Inventory (store owners): `GET /inventory/get-store-inventory`, `POST /inventory/add-inventory`, `DELETE /inventory/delete-inventory`, `PATCH /inventory/:id`, `PATCH /inventory/:id/expiry`, `PATCH /inventory/:id/threshold`
-
-Cart (buyers): `GET /cart/:storeId/items`, `POST /cart/:storeId/items`, `PATCH /cart/:storeId/items/:id`, `DELETE /cart/:storeId/items/:id`
-
-Orders: `POST /order/create-order`, `GET /order/:id/status`
 
 ## Testing
 
