@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, BellOff, Check, Plus, Search, Store, Trash2, X } from "lucide-react";
+import { Bell, BellOff, Check, Pencil, Plus, Search, Store, Trash2, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { Link } from "wouter";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import {
@@ -13,7 +14,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, ApiError } from "@/lib/queryClient";
 import { formatPrice } from "@/lib/currency";
 
 interface SearchResultItem {
@@ -32,11 +33,79 @@ interface PriceAlert {
   id: string;
   inventory_id: string;
   inventory_name: string;
+  store_id: string;
+  store_name: string;
   current_price: number;
   target_price: number;
   is_triggered: boolean;
-  is_active: boolean;
   created_at: string;
+}
+
+function EditAlertDialog({ alert }: { alert: PriceAlert }) {
+  const [open, setOpen] = useState(false);
+  const [targetPrice, setTargetPrice] = useState(String(alert.target_price));
+  const queryClient = useQueryClient();
+  const { toast } = useToast();
+
+  const mutation = useMutation({
+    mutationFn: () =>
+      apiRequest("PATCH", `/price-alerts/${alert.id}`, {
+        target_price: parseFloat(targetPrice),
+      }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/price-alerts"] });
+      setOpen(false);
+      toast({ title: "Alert updated" });
+    },
+    onError: (err: any) => {
+      toast({
+        title: "Error",
+        description: err?.message ?? "Could not update alert",
+        variant: "destructive",
+      });
+    },
+  });
+
+  return (
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (v) setTargetPrice(String(alert.target_price));
+      }}
+    >
+      <DialogTrigger asChild>
+        <Button size="icon" variant="ghost" className="h-8 w-8 text-muted-foreground">
+          <Pencil className="h-4 w-4" />
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>Edit target price</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4 pt-2">
+          <div className="space-y-1.5">
+            <Label>{alert.inventory_name}</Label>
+            <Input
+              autoFocus
+              type="number"
+              step="0.01"
+              min="0"
+              value={targetPrice}
+              onChange={(e) => setTargetPrice(e.target.value)}
+            />
+          </div>
+          <Button
+            className="w-full"
+            disabled={!targetPrice || mutation.isPending}
+            onClick={() => mutation.mutate()}
+          >
+            {mutation.isPending ? "Saving…" : "Save"}
+          </Button>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
 }
 
 function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: string) => void }) {
@@ -63,6 +132,12 @@ function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: strin
             </span>
           )}
         </p>
+        <Link href={`/stores/${alert.store_id}`}>
+          <a className="text-xs text-primary hover:underline flex items-center gap-1 mt-0.5 w-fit">
+            <Store className="h-3 w-3" />
+            {alert.store_name}
+          </a>
+        </Link>
       </div>
 
       <div className="flex items-center gap-2 flex-shrink-0">
@@ -73,6 +148,7 @@ function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: strin
         ) : (
           <Badge variant="secondary" className="text-xs">Watching</Badge>
         )}
+        <EditAlertDialog alert={alert} />
         <Button
           size="icon"
           variant="ghost"
@@ -86,7 +162,13 @@ function AlertRow({ alert, onDelete }: { alert: PriceAlert; onDelete: (id: strin
   );
 }
 
-function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
+function CreateAlertDialog({
+  onCreated,
+  existingInventoryIds,
+}: {
+  onCreated: () => void;
+  existingInventoryIds: Set<string>;
+}) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -122,11 +204,11 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
       toast({ title: "Alert created", description: "We'll track this item's price for you." });
     },
     onError: (err: any) => {
-      toast({
-        title: "Error",
-        description: err?.message ?? "Could not create alert",
-        variant: "destructive",
-      });
+      const description =
+        err instanceof ApiError && err.status === 409
+          ? "You already have an alert for this item."
+          : err?.message ?? "Could not create alert";
+      toast({ title: "Error", description, variant: "destructive" });
     },
   });
 
@@ -195,26 +277,30 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
                         No items found for &ldquo;{debouncedQuery}&rdquo;.
                       </p>
                     ) : (
-                      results.map((item) => (
-                        <button
-                          key={item.id}
-                          type="button"
-                          className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between gap-2"
-                          onClick={() => {
-                            setSelectedItem(item);
-                            setQuery("");
-                          }}
-                        >
-                          <div className="min-w-0">
-                            <p className="text-sm font-medium truncate">{item.name}</p>
-                            <p className="text-xs text-muted-foreground flex items-center gap-1">
-                              <Store className="h-3 w-3" />
-                              {item.store_name}
-                            </p>
-                          </div>
-                          <span className="text-sm font-semibold flex-shrink-0">{formatPrice(item.price)}</span>
-                        </button>
-                      ))
+                      results.map((item) => {
+                        const alreadyTracked = existingInventoryIds.has(item.id);
+                        return (
+                          <button
+                            key={item.id}
+                            type="button"
+                            disabled={alreadyTracked}
+                            className="w-full text-left px-3 py-2 hover:bg-accent transition-colors flex items-center justify-between gap-2 disabled:opacity-50 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                            onClick={() => {
+                              setSelectedItem(item);
+                              setQuery("");
+                            }}
+                          >
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium truncate">{item.name}</p>
+                              <p className="text-xs text-muted-foreground flex items-center gap-1">
+                                <Store className="h-3 w-3" />
+                                {alreadyTracked ? "Already tracked" : item.store_name}
+                              </p>
+                            </div>
+                            <span className="text-sm font-semibold flex-shrink-0">{formatPrice(item.price)}</span>
+                          </button>
+                        );
+                      })
                     )}
                   </div>
                 )}
@@ -222,7 +308,7 @@ function CreateAlertDialog({ onCreated }: { onCreated: () => void }) {
             )}
           </div>
           <div className="space-y-1.5">
-            <Label>Target price (₹)</Label>
+            <Label>Target price</Label>
             <Input
               type="number"
               step="0.01"
@@ -251,7 +337,14 @@ export default function AlertsPage() {
 
   const { data: alerts = [], isLoading } = useQuery<PriceAlert[]>({
     queryKey: ["/price-alerts"],
+    refetchInterval: 30_000,
+    refetchOnWindowFocus: true,
   });
+
+  const existingInventoryIds = useMemo(
+    () => new Set(alerts.map((a) => a.inventory_id)),
+    [alerts]
+  );
 
   const deleteMutation = useMutation({
     mutationFn: (id: string) => apiRequest("DELETE", `/price-alerts/${id}`),
@@ -273,7 +366,10 @@ export default function AlertsPage() {
             Get notified when an item drops to your target price
           </p>
         </div>
-        <CreateAlertDialog onCreated={() => queryClient.invalidateQueries({ queryKey: ["/price-alerts"] })} />
+        <CreateAlertDialog
+          onCreated={() => queryClient.invalidateQueries({ queryKey: ["/price-alerts"] })}
+          existingInventoryIds={existingInventoryIds}
+        />
       </div>
 
       {isLoading ? (
