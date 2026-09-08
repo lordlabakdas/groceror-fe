@@ -10,7 +10,6 @@ import { ProfileSheet } from "@/components/profile-sheet";
 import { CartDrawer } from "@/components/cart-drawer";
 import { useOrderAlerts } from "@/hooks/use-order-alerts";
 import { useSSE } from "@/hooks/use-sse";
-import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import { CommandPalette } from "@/components/command-palette";
 import { useQuery } from "@tanstack/react-query";
 
@@ -50,26 +49,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
   // Chime + toast + browser notification when a new order lands.
   useOrderAlerts(user?.entityType === "store");
   useSSE();
-
-  // Subscription lock/grace banner (SPEC_SUBSCRIPTION.md §3.2) — store owners only.
-  const { data: subscription } = useSubscriptionStatus(user?.entityType === "store");
-  const billingWarning =
-    subscription?.status === "locked"
-      ? {
-          tone: "destructive" as const,
-          message:
-            "Your Groceror subscription payment is past due. Your store is hidden from shoppers until this is resolved.",
-        }
-      : subscription?.status === "grace"
-        ? {
-            tone: "warning" as const,
-            message: `Payment issue with your Groceror subscription — resolve by ${
-              subscription.grace_period_end
-                ? new Date(subscription.grace_period_end).toLocaleDateString()
-                : "soon"
-            } to avoid your store going offline.`,
-          }
-        : null;
 
   return (
     <div className="min-h-screen bg-background">
@@ -123,7 +102,7 @@ export function Layout({ children }: { children: React.ReactNode }) {
                     </Link>
                     <Link href="/billing">
                       <a onClick={() => setDrawerOpen(false)} className={navCls("/billing", location, true)}>
-                        Billing {billingWarning && "⚠"}
+                        Billing
                       </a>
                     </Link>
                   </nav>
@@ -222,7 +201,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
                   <a className={`${navCls("/billing", location)} flex items-center gap-1`}>
                     <CreditCard className="h-3 w-3" />
                     Billing
-                    {billingWarning && <span className="text-destructive">⚠</span>}
                   </a>
                 </Link>
               </nav>
@@ -315,21 +293,6 @@ export function Layout({ children }: { children: React.ReactNode }) {
           </div>
         </div>
       </header>
-      )}
-
-      {billingWarning && location !== "/billing" && (
-        <div
-          className={`px-4 py-2 text-sm text-center font-medium ${
-            billingWarning.tone === "destructive"
-              ? "bg-destructive text-destructive-foreground"
-              : "bg-amber-500/90 text-black"
-          }`}
-        >
-          {billingWarning.message}{" "}
-          <Link href="/billing">
-            <a className="underline underline-offset-2">Go to Billing</a>
-          </Link>
-        </div>
       )}
 
       <main className={location === "/" ? "" : "container mx-auto px-4 py-8"}>

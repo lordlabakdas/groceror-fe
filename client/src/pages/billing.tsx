@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CreditCard, CheckCircle2, AlertTriangle, XCircle, Clock } from "lucide-react";
+import { CreditCard, CheckCircle2, XCircle, Clock } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -10,22 +10,14 @@ import { formatPrice } from "@/lib/currency";
 import { useSubscriptionStatus } from "@/hooks/use-subscription-status";
 import type { SubscriptionInvoice, SubscriptionStatusValue } from "@/types/models";
 
-// Loaded via a <script> tag in client/index.html — Razorpay's Checkout
-// widget isn't an npm package, it's expected to be a global.
-declare global {
-  interface Window {
-    Razorpay: new (options: Record<string, unknown>) => { open: () => void };
-  }
-}
-
 const STATUS_STYLES: Record<
   SubscriptionStatusValue,
   { label: string; badge: string; icon: typeof CheckCircle2 }
 > = {
   trialing: { label: "Trial", badge: "bg-blue-500/20 text-blue-400 border-blue-500/30", icon: Clock },
   active: { label: "Active", badge: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30", icon: CheckCircle2 },
-  grace: { label: "Payment issue", badge: "bg-amber-500/20 text-amber-400 border-amber-500/30", icon: AlertTriangle },
-  locked: { label: "Locked", badge: "bg-destructive/20 text-destructive border-destructive/30", icon: XCircle },
+  grace: { label: "No payment required", badge: "bg-muted text-muted-foreground border-border", icon: CheckCircle2 },
+  locked: { label: "No payment required", badge: "bg-muted text-muted-foreground border-border", icon: CheckCircle2 },
   cancelled: { label: "Cancelled", badge: "bg-muted text-muted-foreground border-border", icon: XCircle },
 };
 
@@ -41,38 +33,6 @@ export default function Billing() {
   const { data: status, isLoading } = useSubscriptionStatus(true);
   const { data: invoicesData } = useQuery<{ invoices: SubscriptionInvoice[] }>({
     queryKey: ["/subscription/invoices"],
-  });
-
-  const checkoutMutation = useMutation({
-    mutationFn: async () => {
-      const res = await apiRequest("POST", "/subscription/checkout");
-      return res.json() as Promise<{ razorpay_subscription_id: string; razorpay_key_id: string }>;
-    },
-    onSuccess: ({ razorpay_subscription_id, razorpay_key_id }) => {
-      if (typeof window.Razorpay !== "function") {
-        toast({
-          title: "Couldn't load payment widget",
-          description: "Refresh the page and try again.",
-          variant: "destructive",
-        });
-        return;
-      }
-      const rzp = new window.Razorpay({
-        key: razorpay_key_id,
-        subscription_id: razorpay_subscription_id,
-        name: "Groceror",
-        description: "Store subscription",
-        handler: () => {
-          toast({ title: "Payment method saved", description: "Your subscription is now set up." });
-          qc.invalidateQueries({ queryKey: ["/subscription/status"] });
-        },
-        theme: { color: "#16a34a" },
-      });
-      rzp.open();
-    },
-    onError: (err: Error) => {
-      toast({ title: "Couldn't start checkout", description: err.message, variant: "destructive" });
-    },
   });
 
   const cancelMutation = useMutation({
@@ -113,30 +73,15 @@ export default function Billing() {
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="text-sm text-muted-foreground space-y-1">
-            <div>Plan: {formatPrice(status.plan_price_paise / 100)} / month</div>
-            {status.status === "trialing" && <div>Trial ends {formatDate(status.trial_end)}</div>}
+            {status.razorpay_subscription_id && <div>Plan: {formatPrice(status.plan_price_paise / 100)} / month</div>}
             {status.status === "active" && status.current_period_end && (
               <div>Renews {formatDate(status.current_period_end)}</div>
             )}
-            {status.status === "grace" && status.grace_period_end && (
-              <div className="text-amber-400">
-                Resolve by {formatDate(status.grace_period_end)} to avoid your store going offline to shoppers.
-              </div>
-            )}
-            {status.status === "locked" && (
-              <div className="text-destructive">
-                Your store is currently hidden from shoppers until payment is resolved.
-              </div>
-            )}
+            <div>No subscription payment is required to keep your store online.</div>
           </div>
 
           <div className="flex gap-2">
-            {status.checkout_needed && (
-              <Button onClick={() => checkoutMutation.mutate()} disabled={checkoutMutation.isPending}>
-                {checkoutMutation.isPending ? "Starting…" : status.status === "trialing" ? "Set up payment" : "Retry payment"}
-              </Button>
-            )}
-            {!status.checkout_needed && status.status !== "cancelled" && (
+            {status.razorpay_subscription_id && status.status !== "cancelled" && (
               <Button
                 variant="outline"
                 onClick={() => cancelMutation.mutate()}

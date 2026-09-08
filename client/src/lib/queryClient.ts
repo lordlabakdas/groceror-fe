@@ -1,6 +1,5 @@
-import { MutationCache, QueryClient, QueryFunction } from "@tanstack/react-query";
+import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
-import { toast } from "@/hooks/use-toast";
 
 // ---------------------------------------------------------------------------
 // JWT token helpers — groceror returns a Bearer token on login
@@ -84,27 +83,7 @@ export const getQueryFn: <T>(options: {
     return await res.json();
   };
 
-// Global 402 handling — a store-owner mutation hitting a billing-locked
-// store (§3.3). One touchpoint here covers every mutation on every page
-// rather than adding an onError to each of coupons/bulk-rules/delivery-zone/
-// flash-sales/inventory/stock-alerts individually.
-function handleGlobalMutationError(error: unknown) {
-  if (error instanceof ApiError && error.status === 402) {
-    toast({
-      title: "Payment required",
-      description: "Your store's subscription payment is past due. Redirecting to Billing…",
-      variant: "destructive",
-    });
-    setTimeout(() => {
-      window.location.href = "/billing";
-    }, 1500);
-  }
-}
-
 export const queryClient = new QueryClient({
-  mutationCache: new MutationCache({
-    onError: handleGlobalMutationError,
-  }),
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
