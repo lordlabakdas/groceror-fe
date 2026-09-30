@@ -365,6 +365,37 @@ function cardBrandIcon(cardNumber: string): string {
 }
 
 // ---------------------------------------------------------------------------
+// Remembered drop-off (localStorage — per browser, not per account)
+// ---------------------------------------------------------------------------
+
+const DROPOFF_STORAGE_KEY = "groceror_last_dropoff";
+
+interface StoredDropoff {
+  fulfillment: "pickup" | "delivery";
+  address: string;
+  coords: { lat: number; lng: number } | null;
+}
+
+function loadStoredDropoff(): StoredDropoff {
+  try {
+    const raw = localStorage.getItem(DROPOFF_STORAGE_KEY);
+    if (!raw) return { fulfillment: "pickup", address: "", coords: null };
+    const parsed = JSON.parse(raw);
+    const coords =
+      parsed?.coords && typeof parsed.coords.lat === "number" && typeof parsed.coords.lng === "number"
+        ? { lat: parsed.coords.lat, lng: parsed.coords.lng }
+        : null;
+    return {
+      fulfillment: parsed?.fulfillment === "delivery" ? "delivery" : "pickup",
+      address: typeof parsed?.address === "string" ? parsed.address : "",
+      coords,
+    };
+  } catch {
+    return { fulfillment: "pickup", address: "", coords: null };
+  }
+}
+
+// ---------------------------------------------------------------------------
 // PaymentView
 // ---------------------------------------------------------------------------
 
@@ -405,13 +436,32 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   // dropoff point via the browser's geolocation API — same pattern the
   // store-owner delivery-zone page already uses — rather than a full
   // address-entry/geocoding UI.
-  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">("pickup");
-  const [deliveryAddress, setDeliveryAddress] = useState("");
-  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">(
+    () => loadStoredDropoff().fulfillment
+  );
+  const [deliveryAddress, setDeliveryAddress] = useState(() => loadStoredDropoff().address);
+  const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(
+    () => loadStoredDropoff().coords
+  );
   const [locating, setLocating] = useState(false);
   const [quote, setQuote] = useState<{ fee: number } | null>(null);
   const [quoting, setQuoting] = useState(false);
   const [quoteError, setQuoteError] = useState<string | null>(null);
+
+  // Remember the shopper's last drop-off so they aren't asked to re-share
+  // location on every checkout — a per-browser convenience only, not synced
+  // to their account. The delivery quote itself is never trusted from
+  // storage; the effect below always re-fetches a fresh one.
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        DROPOFF_STORAGE_KEY,
+        JSON.stringify({ fulfillment, address: deliveryAddress, coords: deliveryCoords })
+      );
+    } catch {
+      // Private browsing / storage disabled — checkout still works, it just re-asks next time.
+    }
+  }, [fulfillment, deliveryAddress, deliveryCoords]);
 
   function useMyLocationForDelivery() {
     if (!navigator.geolocation) return;
