@@ -669,12 +669,6 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
 
           {fulfillment === "delivery" && (
             <div className="space-y-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
-              <Input
-                placeholder="Delivery address (for the rider)"
-                value={deliveryAddress}
-                onChange={(e) => setDeliveryAddress(e.target.value)}
-                className="h-9 text-sm"
-              />
               <Button
                 type="button"
                 variant="outline"
@@ -686,6 +680,18 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
                 <MapPin className="h-3.5 w-3.5 mr-1" />
                 {locating ? "Locating…" : deliveryCoords ? "Location set — update" : "Use my location"}
               </Button>
+              {!deliveryCoords && !locating && (
+                <p className="text-xs text-muted-foreground">
+                  Tap "Use my location" to set where we deliver — typing below doesn't set it.
+                </p>
+              )}
+
+              <Input
+                placeholder="Landmark or note for the rider (optional)"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                className="h-9 text-sm"
+              />
 
               {quoting && <p className="text-xs text-muted-foreground">Checking delivery fee…</p>}
               {quote && !quoting && (
