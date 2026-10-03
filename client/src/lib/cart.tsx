@@ -23,6 +23,7 @@ type CartAction =
   | { type: "REMOVE_ITEM"; payload: string }
   | { type: "UPDATE_QUANTITY"; payload: { id: string; quantity: number } }
   | { type: "UPDATE_PRICES"; payload: { id: string; price: number }[] }
+  | { type: "UPDATE_STOCK"; payload: { id: string; stock: number }[] }
   | { type: "CLEAR_CART" };
 
 const CartContext = createContext<{
@@ -67,6 +68,8 @@ function cartReducer(state: CartState, action: CartAction): CartState {
         ),
       };
     }
+    case "UPDATE_STOCK":
+      return { items: state.items.map((item) => ({ ...item, stock: action.payload.find((p) => p.id === item.id)?.stock ?? item.stock })) };
     case "CLEAR_CART":
       return { items: [] };
     default:
