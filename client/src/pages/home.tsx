@@ -43,7 +43,7 @@ const STEPS = [
     img: "/step-bag.jpg",
     alt: "Paper grocery bag packed with fresh produce on a kitchen counter",
     title: "Place your order",
-    desc: "Fast local delivery or zero-wait pickup. Securely paid and tracked in real-time.",
+    desc: "Local delivery with order updates from your grocer.",
   },
 ];
 

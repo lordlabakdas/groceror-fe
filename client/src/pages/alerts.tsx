@@ -331,6 +331,42 @@ function CreateAlertDialog({
   );
 }
 
+interface OrderUpdate {
+  id: string;
+  store_name: string | null;
+  status: string;
+  delivery_fee: number | null;
+}
+
+function OrderUpdates() {
+  const { data, isPending, isError, refetch } = useQuery<{ orders: OrderUpdate[] }>({
+    queryKey: ["/order/history"],
+    staleTime: 0,
+    refetchInterval: 20_000,
+    refetchOnWindowFocus: true,
+  });
+  return (
+    <section className="space-y-3" aria-label="Order updates">
+      <h2 className="text-lg font-semibold">Order updates</h2>
+      {isPending && <p className="text-sm text-muted-foreground">Loading order updates…</p>}
+      {isError && <p role="alert">Could not load order updates. <Button variant="ghost" onClick={() => refetch()}>Retry</Button></p>}
+      {data?.orders.length === 0 && <p className="text-sm text-muted-foreground">No orders yet.</p>}
+      {data?.orders.slice(0, 10).map((order) => (
+        <Link key={order.id} href="/orders">
+          <a className="block rounded-xl border bg-card p-3">
+            <p className="font-medium text-sm">{order.store_name ?? "Your store"} · Order {order.id.slice(0, 8)}</p>
+            <p className="text-sm text-muted-foreground">
+              {order.status === "ready"
+                ? order.delivery_fee === null ? "Ready for pickup" : "Packed and ready for delivery"
+                : `Order ${order.status}`}
+            </p>
+          </a>
+        </Link>
+      ))}
+    </section>
+  );
+}
+
 export default function AlertsPage() {
   const queryClient = useQueryClient();
   const { toast } = useToast();
@@ -371,6 +407,8 @@ export default function AlertsPage() {
           existingInventoryIds={existingInventoryIds}
         />
       </div>
+
+      <OrderUpdates />
 
       {isLoading ? (
         <div className="space-y-3">

@@ -85,7 +85,7 @@ export function useOrderAlerts(enabled: boolean) {
       newOrders.length === 1
         ? "New order received"
         : `${newOrders.length} new orders received`;
-    const description = `${formatPrice(total)} — open Orders to accept.`;
+    const description = `${formatPrice(total)} — open Orders to prepare.`;
 
     toast({ title, description });
 

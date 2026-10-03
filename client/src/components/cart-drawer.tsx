@@ -1,11 +1,10 @@
 import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, CalendarClock, ChevronDown, Truck, MapPin } from "lucide-react";
+import { X, ArrowLeft, Minus, Plus, Trash2, ShoppingCart, Tag, Star, Package, ChevronDown, Truck, MapPin } from "lucide-react";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useCart, type CartItem } from "@/lib/cart";
 import { getProductImage } from "@/lib/catalog";
 import { apiRequest } from "@/lib/queryClient";
@@ -85,6 +84,30 @@ function computeBulkDiscount(items: CartItem[], rules: BulkRuleAPI[]): { discoun
   return { discount: Math.round(discount * 100) / 100, applied };
 }
 
+interface CheckoutInventory {
+  id: string;
+  quantity: number;
+  price: number;
+  sale_price?: number | null;
+  flash_sale_price?: number | null;
+}
+
+function stockIssue(items: CartItem[], inventory: CheckoutInventory[]): string | null {
+  const unavailable = items.filter((item) => {
+    const row = inventory.find((inv) => inv.id === item.id);
+    return !row || row.quantity < item.quantity;
+  });
+  return unavailable.length ? `Stock changed for ${unavailable.map((i) => i.name).join(", ")}. Edit your cart to continue.` : null;
+}
+
+function checkoutError(error: unknown): string {
+  const message = error instanceof Error ? error.message.replace(/^\d+:\s*/, "") : "Please try again.";
+  try {
+    const detail = JSON.parse(message).detail;
+    return typeof detail === "string" ? detail : message;
+  } catch { return message; }
+}
+
 interface ConfirmationData {
   storeName: string;
   pointsEarned: number;
@@ -109,32 +132,31 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
   const { toast } = useToast();
   const items = state.items;
 
+  const inventory = useQuery<{ inventory: CheckoutInventory[] }>({
+    queryKey: [`/inventory/browse/${items[0]?.storeId}`],
+    enabled: open && items.length > 0,
+    staleTime: 0,
+    refetchInterval: open ? 15_000 : false,
+    refetchOnWindowFocus: true,
+  });
+  const stockMessage = inventory.isError
+    ? "Could not check stock. Please retry before checkout."
+    : inventory.data ? stockIssue(items, inventory.data.inventory) : null;
+  const stockBlocked = inventory.isPending || inventory.isError || !!stockMessage;
+
   useEffect(() => {
-    if (!open || items.length === 0) return;
-    const storeId = items[0].storeId;
-    apiRequest("GET", `/inventory/browse/${storeId}`)
-      .then((res) => res.json())
-      .then((data: { inventory: { id: string; price: number; sale_price?: number | null; flash_sale_price?: number | null }[] }) => {
-        const priceMap: Record<string, number> = {};
-        for (const inv of data.inventory) {
-          priceMap[inv.id] = inv.flash_sale_price ?? inv.sale_price ?? inv.price;
-        }
-        const changed = items.filter(
-          (i) => priceMap[i.id] !== undefined && priceMap[i.id] !== i.price
-        );
-        if (changed.length > 0) {
-          dispatch({
-            type: "UPDATE_PRICES",
-            payload: changed.map((i) => ({ id: i.id, price: priceMap[i.id] })),
-          });
-          toast({
-            title: "Prices updated",
-            description: "Some item prices have changed since you last shopped.",
-          });
-        }
-      })
-      .catch(() => {});
-  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (!inventory.data) return;
+    const rows = inventory.data.inventory;
+    const prices = rows.map((inv) => ({ id: inv.id, price: inv.flash_sale_price ?? inv.sale_price ?? inv.price }));
+    if (items.some((item) => prices.some((p) => p.id === item.id && p.price !== item.price))) {
+      dispatch({ type: "UPDATE_PRICES", payload: prices });
+      toast({ title: "Prices updated", description: "Some item prices have changed since you last shopped." });
+    }
+    const stock = items.map((item) => ({ id: item.id, stock: rows.find((inv) => inv.id === item.id)?.quantity ?? 0 }));
+    if (stock.some((item) => items.find((i) => i.id === item.id)?.stock !== item.stock)) {
+      dispatch({ type: "UPDATE_STOCK", payload: stock });
+    }
+  }, [inventory.data, items, dispatch, toast]);
 
   const storeName = items[0]?.storeName ?? "";
   const itemCount = items.reduce((acc, i) => acc + i.quantity, 0);
@@ -167,6 +189,12 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
         className="w-full sm:w-96 p-0 flex flex-col [&>button]:hidden"
         aria-describedby={undefined}
       >
+        {drawerState !== "confirmation" && items.length > 0 && stockMessage && (
+          <div role="alert" className="p-3 text-sm text-destructive bg-destructive/10">
+            {stockMessage}
+            {inventory.isError && <Button variant="ghost" size="sm" onClick={() => inventory.refetch()}>Retry stock check</Button>}
+          </div>
+        )}
         {drawerState === "cart" && (
           <CartView
             items={items}
@@ -176,12 +204,14 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
             onClose={handleClose}
             onUpdateQuantity={onUpdateQuantity}
             onRemoveItem={onRemoveItem}
-            onCheckout={() => setDrawerState("payment")}
+            onCheckout={() => { if (!stockBlocked) setDrawerState("payment"); }}
+            stockBlocked={stockBlocked}
             onClearCart={() => dispatch({ type: "CLEAR_CART" })}
           />
         )}
         {drawerState === "payment" && (
           <PaymentView
+            stockBlocked={stockBlocked}
             items={items}
             total={total}
             itemCount={itemCount}
@@ -208,6 +238,7 @@ export function CartDrawer({ open, onClose }: CartDrawerProps) {
 // ---------------------------------------------------------------------------
 
 interface CartViewProps {
+  stockBlocked: boolean;
   items: CartItem[];
   storeName: string;
   itemCount: number;
@@ -219,7 +250,7 @@ interface CartViewProps {
   onClearCart: () => void;
 }
 
-function CartView({
+function CartView({ stockBlocked,
   items, storeName, itemCount, total, onClose, onUpdateQuantity, onRemoveItem, onCheckout, onClearCart,
 }: CartViewProps) {
   return (
@@ -263,7 +294,7 @@ function CartView({
             <span className="text-muted-foreground">{itemCount} {itemCount === 1 ? "item" : "items"}</span>
             <span className="font-semibold text-primary text-base">{formatPrice(total)}</span>
           </div>
-          <Button className="w-full" onClick={onCheckout}>Checkout →</Button>
+          <Button className="w-full" onClick={onCheckout} disabled={stockBlocked}>Checkout →</Button>
         </div>
       )}
     </>
@@ -357,11 +388,12 @@ function validateCard(form: CardForm): CardErrors {
 }
 
 function cardBrandIcon(cardNumber: string): string {
-  const first = cardNumber.replace(/\s/g, "")[0];
-  if (first === "4") return "💳 Visa";
-  if (first === "5") return "💳 MC";
-  if (first === "3") return "💳 Amex";
-  return "💳";
+  const digits = cardNumber.replace(/\D/g, "");
+  if (/^4/.test(digits)) return "Visa";
+  const prefix = Number(digits.slice(0, 4));
+  if (/^5[1-5]/.test(digits) || (digits.length >= 4 && prefix >= 2221 && prefix <= 2720)) return "Mastercard";
+  if (/^3[47]/.test(digits)) return "American Express";
+  return "Card";
 }
 
 // ---------------------------------------------------------------------------
@@ -379,19 +411,19 @@ interface StoredDropoff {
 function loadStoredDropoff(): StoredDropoff {
   try {
     const raw = localStorage.getItem(DROPOFF_STORAGE_KEY);
-    if (!raw) return { fulfillment: "pickup", address: "", coords: null };
+    if (!raw) return { fulfillment: "delivery", address: "", coords: null };
     const parsed = JSON.parse(raw);
     const coords =
-      parsed?.coords && typeof parsed.coords.lat === "number" && typeof parsed.coords.lng === "number"
+      parsed?.coords && Number.isFinite(parsed.coords.lat) && Math.abs(parsed.coords.lat) <= 90 && Number.isFinite(parsed.coords.lng) && Math.abs(parsed.coords.lng) <= 180
         ? { lat: parsed.coords.lat, lng: parsed.coords.lng }
         : null;
     return {
-      fulfillment: parsed?.fulfillment === "delivery" ? "delivery" : "pickup",
+      fulfillment: "delivery", // Pickup is disabled for the MVP, including saved preferences.
       address: typeof parsed?.address === "string" ? parsed.address : "",
       coords,
     };
   } catch {
-    return { fulfillment: "pickup", address: "", coords: null };
+    return { fulfillment: "delivery", address: "", coords: null };
   }
 }
 
@@ -400,6 +432,7 @@ function loadStoredDropoff(): StoredDropoff {
 // ---------------------------------------------------------------------------
 
 interface PaymentViewProps {
+  stockBlocked: boolean;
   items: CartItem[];
   total: number;
   itemCount: number;
@@ -409,13 +442,13 @@ interface PaymentViewProps {
   onSuccess: (data: ConfirmationData) => void;
 }
 
-function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSuccess }: PaymentViewProps) {
-  const [form, setForm] = useState<CardForm>({ cardNumber: "", expiry: "", cvv: "", nameOnCard: "" });
+function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose, onBack, onSuccess }: PaymentViewProps) {
+  const demoExpiry = `12/${String(new Date().getFullYear() + 2).slice(-2)}`;
+  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [form, setForm] = useState<CardForm>({ cardNumber: "4242 4242 4242 4242", expiry: demoExpiry, cvv: "123", nameOnCard: "Demo Shopper" });
   const [touched, setTouched] = useState<Partial<Record<keyof CardForm, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [scheduleFreq, setScheduleFreq] = useState<string | null>(null);
-  const [scheduling, setScheduling] = useState(false);
 
   const { toast } = useToast();
 
@@ -436,17 +469,14 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   // dropoff point via the browser's geolocation API — same pattern the
   // store-owner delivery-zone page already uses — rather than a full
   // address-entry/geocoding UI.
-  const [fulfillment, setFulfillment] = useState<"pickup" | "delivery">(
-    () => loadStoredDropoff().fulfillment
-  );
+  // Pickup selection is commented out for the delivery-only MVP.
+  const fulfillment = "delivery";
   const [deliveryAddress, setDeliveryAddress] = useState(() => loadStoredDropoff().address);
   const [deliveryCoords, setDeliveryCoords] = useState<{ lat: number; lng: number } | null>(
     () => loadStoredDropoff().coords
   );
   const [locating, setLocating] = useState(false);
-  const [quote, setQuote] = useState<{ fee: number } | null>(null);
-  const [quoting, setQuoting] = useState(false);
-  const [quoteError, setQuoteError] = useState<string | null>(null);
+
 
   // Remember the shopper's last drop-off so they aren't asked to re-share
   // location on every checkout — a per-browser convenience only, not synced
@@ -464,7 +494,11 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
   }, [fulfillment, deliveryAddress, deliveryCoords]);
 
   function useMyLocationForDelivery() {
-    if (!navigator.geolocation) return;
+    if (!navigator.geolocation) {
+      toast({ title: "Location unavailable", description: "This browser does not support location sharing.", variant: "destructive" });
+      return;
+    }
+    setDeliveryCoords(null);
     setLocating(true);
     navigator.geolocation.getCurrentPosition(
       (pos) => {
@@ -479,26 +513,25 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
     );
   }
 
-  useEffect(() => {
-    if (fulfillment !== "delivery" || !deliveryCoords || !storeId) {
-      setQuote(null);
-      return;
-    }
-    setQuoting(true);
-    setQuoteError(null);
-    apiRequest("POST", "/order/delivery-quote", {
-      store_id: storeId,
-      dropoff_lat: deliveryCoords.lat,
-      dropoff_lng: deliveryCoords.lng,
-    })
-      .then((r) => r.json())
-      .then((d: { fee: number }) => setQuote({ fee: d.fee }))
-      .catch((err: unknown) => {
-        setQuote(null);
-        setQuoteError(err instanceof Error ? err.message.replace(/^\d+:\s*/, "") : "Delivery unavailable for this address");
-      })
-      .finally(() => setQuoting(false));
-  }, [fulfillment, deliveryCoords, storeId]);
+  // Coordinates are part of the key, so a late response for an older
+  // location can never enable checkout for the current location.
+  const deliveryQuote = useQuery<{ fee: number }>({
+    queryKey: ["delivery-quote", storeId, deliveryCoords?.lat, deliveryCoords?.lng],
+    enabled: !!deliveryCoords && !!storeId,
+    staleTime: 0,
+    retry: false,
+    queryFn: async () => {
+      const response = await apiRequest("POST", "/order/delivery-quote", {
+        store_id: storeId,
+        dropoff_lat: deliveryCoords!.lat,
+        dropoff_lng: deliveryCoords!.lng,
+      });
+      return response.json();
+    },
+  });
+  const quote = deliveryCoords && !deliveryQuote.isError ? deliveryQuote.data : null;
+  const quoting = deliveryQuote.isFetching;
+  const quoteError = deliveryQuote.isError ? checkoutError(deliveryQuote.error) : null;
 
   const deliveryFee = fulfillment === "delivery" ? (quote?.fee ?? 0) : 0;
 
@@ -568,15 +601,20 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
 
   async function handlePlaceOrder() {
     setTouched({ cardNumber: true, expiry: true, cvv: true, nameOnCard: true });
-    if (hasErrors) return;
+    if (submitting || stockBlocked || (paymentMethod === "card" && hasErrors)) return;
     if (fulfillment === "delivery" && !deliveryCoords) {
-      toast({ description: "Set a delivery location first, or switch to pickup.", variant: "destructive" });
+      toast({ description: "Set a delivery location first.", variant: "destructive" });
       return;
     }
+    if (!quote || quoting || locating || quoteError) return;
     setSubmitting(true);
     setApiError(null);
     try {
       const { apiRequest: req } = await import("@/lib/queryClient");
+      const stockResponse = await req("GET", `/inventory/browse/${storeId}`);
+      const stockData: { inventory: CheckoutInventory[] } = await stockResponse.json();
+      const issue = stockIssue(items, stockData.inventory);
+      if (issue) throw new Error(issue);
       const orderItems = items.map(({ id, quantity }) => ({ inventory_id: id, quantity }));
       const res = await req("POST", "/order/create-order", {
         items: orderItems,
@@ -599,7 +637,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
         deliveryFee: data.delivery_fee ?? null,
       });
     } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : "Order failed. Please try again.";
+      const message = checkoutError(err);
       setApiError(message);
     } finally {
       setSubmitting(false);
@@ -644,31 +682,22 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </button>
         </div>
 
-        {/* Fulfillment: pickup or delivery */}
+        {/* Pickup disabled for the MVP. Restore only with product approval:
+            <button onClick={() => setFulfillment("pickup")}>Pickup</button>
+        */}
         <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              className={`flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2.5 border transition-colors ${
-                fulfillment === "pickup" ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
-              }`}
-              onClick={() => setFulfillment("pickup")}
-            >
-              <Package className="h-4 w-4" /> Pickup
-            </button>
-            <button
-              type="button"
-              className={`flex items-center justify-center gap-1.5 text-sm font-medium rounded-lg py-2.5 border transition-colors ${
-                fulfillment === "delivery" ? "bg-primary/10 border-primary text-primary" : "bg-muted border-border text-muted-foreground hover:bg-muted/80"
-              }`}
-              onClick={() => setFulfillment("delivery")}
-            >
-              <Truck className="h-4 w-4" /> Delivery
-            </button>
-          </div>
+          <p className="text-sm font-medium flex items-center gap-2"><Truck className="h-4 w-4" /> Delivery</p>
 
           {fulfillment === "delivery" && (
             <div className="space-y-2 bg-muted/50 border border-border rounded-lg px-3 py-2.5">
+              <Input
+                placeholder="Delivery address (for the rider)"
+                aria-label="Delivery address"
+                value={deliveryAddress}
+                onChange={(e) => setDeliveryAddress(e.target.value)}
+                className="h-9 text-sm"
+              />
+              <p className="text-xs text-muted-foreground">Use location sharing to set the delivery point. The address above provides directions for the rider.</p>
               <Button
                 type="button"
                 variant="outline"
@@ -699,14 +728,8 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
               )}
               {quoteError && !quoting && (
                 <div className="flex items-center justify-between gap-2">
-                  <p className="text-xs text-destructive">{quoteError}</p>
-                  <button
-                    type="button"
-                    className="text-xs text-primary hover:underline shrink-0"
-                    onClick={() => setFulfillment("pickup")}
-                  >
-                    Switch to pickup
-                  </button>
+                  <p role="alert" className="text-xs text-destructive">{quoteError}</p>
+                  <Button variant="ghost" size="sm" onClick={() => deliveryQuote.refetch()}>Retry</Button>
                 </div>
               )}
             </div>
@@ -874,27 +897,29 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           </div>
         )}
 
-        {/* Express payment */}
-        <div className="grid grid-cols-2 gap-2">
-          <button disabled title="Coming soon" className="flex items-center justify-center gap-1.5 bg-muted text-muted-foreground border border-border text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60">
-            <span>⬛</span> Apple Pay
-          </button>
-          <button disabled title="Coming soon" className="flex items-center justify-center gap-1.5 bg-muted text-muted-foreground border border-border text-sm font-medium rounded-lg py-2.5 cursor-not-allowed opacity-60">
-            G Pay
-          </button>
+        <div className="rounded-lg border border-amber-500/40 bg-amber-500/10 p-3 space-y-2">
+          <p className="text-sm font-semibold">Demo payment — no charge</p>
+          <p className="text-xs">Payments are not connected yet. This places an order without charging you. Use test details only.</p>
+          <div className="flex flex-wrap gap-2" role="group" aria-label="Demo payment method">
+            {[["card", "Card"], ["apple", "Apple Pay"], ["gpay", "G Pay / UPI"]].map(([value, label]) => (
+              <Button key={value} variant={paymentMethod === value ? "default" : "outline"} size="sm" aria-pressed={paymentMethod === value} onClick={() => setPaymentMethod(value)}>{label} (demo)</Button>
+            ))}
+          </div>
         </div>
 
-        <div className="flex items-center gap-3">
-          <div className="flex-1 h-px bg-border" />
-          <span className="text-xs text-muted-foreground">or pay by card</span>
-          <div className="flex-1 h-px bg-border" />
-        </div>
-
-        {/* Card form */}
-        <div className="space-y-3">
+        {/* Test card details remain in memory only; never saved or submitted. */}
+        {paymentMethod === "card" && <div className="space-y-3">
+          <label className="text-xs block">Preselected test card
+            <select aria-label="Preselected test card" className="block w-full mt-1 bg-input border rounded-lg p-2" value={form.cardNumber.replace(/\s/g, "")} onChange={(e) => setForm({ cardNumber: e.target.value, expiry: demoExpiry, cvv: "123", nameOnCard: "Demo Shopper" })}>
+              <option value="4242424242424242">Visa ending 4242 (test)</option>
+              <option value="5555555555554444">Mastercard ending 4444 (test)</option>
+              <option value="2223003122003222">Mastercard ending 3222 (test)</option>
+              {!['4242424242424242', '5555555555554444', '2223003122003222'].includes(form.cardNumber.replace(/\s/g, "")) && <option value={form.cardNumber.replace(/\s/g, "")}>Custom test card</option>}
+            </select>
+          </label>
           <div>
             <div className="relative">
-              <input className={inputCls("cardNumber")} placeholder="Card number" value={form.cardNumber} maxLength={23} onChange={(e) => set("cardNumber", e.target.value)} onBlur={() => touch("cardNumber")} />
+              <input className={inputCls("cardNumber")} aria-label="Test card number" placeholder="Card number" value={form.cardNumber} maxLength={23} onChange={(e) => set("cardNumber", e.target.value)} onBlur={() => touch("cardNumber")} />
               <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm pointer-events-none">{cardBrandIcon(form.cardNumber)}</span>
             </div>
             {touched.cardNumber && errors.cardNumber && <p className="text-destructive text-xs mt-1">{errors.cardNumber}</p>}
@@ -915,7 +940,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
             <input className={inputCls("nameOnCard")} placeholder="Name on card" value={form.nameOnCard} onChange={(e) => set("nameOnCard", e.target.value)} onBlur={() => touch("nameOnCard")} />
             {touched.nameOnCard && errors.nameOnCard && <p className="text-destructive text-xs mt-1">{errors.nameOnCard}</p>}
           </div>
-        </div>
+        </div>}
 
         {apiError && (
           <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5">{apiError}</p>
@@ -926,7 +951,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
       <div className="border-t px-4 py-4 flex-shrink-0 space-y-2">
         <Button
           className="w-full"
-          disabled={submitting || (fulfillment === "delivery" && (quoting || !!quoteError || !deliveryCoords))}
+          disabled={submitting || stockBlocked || locating || quoting || !!quoteError || !deliveryCoords || !quote}
           onClick={handlePlaceOrder}
         >
           {submitting ? (
@@ -939,45 +964,7 @@ function PaymentView({ items, total, itemCount, storeName, onClose, onBack, onSu
           )}
         </Button>
 
-        {/* Schedule recurring */}
-        <div className="flex items-center gap-2">
-          <Select value={scheduleFreq ?? ""} onValueChange={(v) => setScheduleFreq(v || null)}>
-            <SelectTrigger className="flex-1 h-8 text-xs">
-              <SelectValue placeholder="Schedule recurring…" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="weekly">Every week</SelectItem>
-              <SelectItem value="biweekly">Every 2 weeks</SelectItem>
-              <SelectItem value="monthly">Every month</SelectItem>
-            </SelectContent>
-          </Select>
-          {scheduleFreq && (
-            <Button
-              size="sm"
-              variant="outline"
-              className="h-8 text-xs flex-shrink-0"
-              disabled={scheduling}
-              onClick={async () => {
-                setScheduling(true);
-                try {
-                  await apiRequest("POST", "/scheduled-orders", {
-                    frequency: scheduleFreq,
-                    items: items.map((i) => ({ inventory_id: i.id, quantity: i.quantity })),
-                  });
-                  toast({ description: "Recurring order saved" });
-                  setScheduleFreq(null);
-                } catch {
-                  toast({ description: "Could not save recurring order", variant: "destructive" });
-                } finally {
-                  setScheduling(false);
-                }
-              }}
-            >
-              <CalendarClock className="h-3.5 w-3.5 mr-1" />
-              Save
-            </Button>
-          )}
-        </div>
+        {/* Recurring checkout controls deferred until after MVP. */}
       </div>
     </div>
   );
@@ -1002,7 +989,7 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
         <div>
           <h3 className="font-bold text-xl">You're all set!</h3>
           {storeName && <p className="text-sm text-muted-foreground mt-1">{storeName}</p>}
-          <p className="text-sm font-semibold text-primary mt-1">{formatPrice(finalTotal)} charged</p>
+          <p className="text-sm font-semibold text-primary mt-1">{formatPrice(finalTotal)} order total — no payment collected</p>
         </div>
 
         {(discountAmount > 0 || pointsEarned > 0 || !!deliveryFee) && (
@@ -1028,10 +1015,10 @@ function ConfirmationView({ storeName, pointsEarned, discountAmount, finalTotal,
         <div className="w-full bg-muted border border-border rounded-xl p-4 text-left">
           <p className="text-xs font-bold text-foreground mb-1.5">What happens next</p>
           <p className="text-sm text-muted-foreground leading-relaxed">
-            {deliveryFee
+            {deliveryFee != null
               ? <>{storeName || "The store"} will pack your order, then request a courier. Head to{" "}
                   <span className="text-primary font-semibold">Orders</span> to track delivery status.</>
-              : <>{storeName || "The store"} will confirm your order. Head to{" "}
+              : <>{storeName || "The store"} has confirmed your order. Head to{" "}
                   <span className="text-primary font-semibold">Orders</span> to track its status.</>}
           </p>
         </div>
