@@ -449,6 +449,10 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
   const [touched, setTouched] = useState<Partial<Record<keyof CardForm, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [demoOtp, setDemoOtp] = useState("");
+  const [reservationExpiresAt, setReservationExpiresAt] = useState<string | null>(null);
+  const [reservationSeconds, setReservationSeconds] = useState(0);
+  const [reservationError, setReservationError] = useState<string | null>(null);
 
   const { toast } = useToast();
 
@@ -464,6 +468,39 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
   // Bulk rules
   const [bulkRules, setBulkRules] = useState<BulkRuleAPI[]>([]);
   const storeId = items[0]?.storeId;
+
+  async function reserveCart() {
+    if (!storeId) return false;
+    try {
+      const response = await apiRequest("POST", `/cart/${storeId}/reserve`);
+      const data: { status: string; expires_at?: string | null; remaining_seconds?: number } = await response.json();
+      if (data.status !== "active" || !data.expires_at) throw new Error("Stock is no longer available. Refresh your cart.");
+      setReservationExpiresAt(data.expires_at);
+      setReservationSeconds(data.remaining_seconds ?? 0);
+      setReservationError(null);
+      return true;
+    } catch (error) {
+      setReservationExpiresAt(null);
+      setReservationSeconds(0);
+      setReservationError(checkoutError(error));
+      return false;
+    }
+  }
+
+  useEffect(() => {
+    if (!storeId) return;
+    void reserveCart();
+    const timer = window.setInterval(() => {
+      setReservationSeconds((seconds) => {
+        if (seconds <= 1) {
+          void reserveCart();
+          return 0;
+        }
+        return seconds - 1;
+      });
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [storeId]);
 
   // Delivery (see SPEC_DELIVERY_DISPATCH.md). v1 only supports setting the
   // dropoff point via the browser's geolocation API — same pattern the
@@ -601,7 +638,7 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
 
   async function handlePlaceOrder() {
     setTouched({ cardNumber: true, expiry: true, cvv: true, nameOnCard: true });
-    if (submitting || stockBlocked || (paymentMethod === "card" && hasErrors)) return;
+    if (submitting || stockBlocked || !reservationExpiresAt || reservationSeconds <= 0 || demoOtp !== "123456" || (paymentMethod === "card" && hasErrors)) return;
     if (fulfillment === "delivery" && !deliveryCoords) {
       toast({ description: "Set a delivery location first.", variant: "destructive" });
       return;
@@ -907,6 +944,14 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
           </div>
         </div>
 
+        <div className="rounded-lg border border-border bg-muted/40 p-3 space-y-2">
+          <div className="flex items-center justify-between">
+            <p className="text-xs font-semibold">Stock reserved for {Math.floor(reservationSeconds / 60)}:{String(reservationSeconds % 60).padStart(2, "0")}</p>
+            {reservationError && <span className="text-xs text-destructive">Reservation unavailable</span>}
+          </div>
+          <p className="text-xs text-muted-foreground">Your cart is held for 20 minutes. It refreshes automatically if the timer expires.</p>
+        </div>
+
         {/* Test card details remain in memory only; never saved or submitted. */}
         {paymentMethod === "card" && <div className="space-y-3">
           <label className="text-xs block">Preselected test card
@@ -942,6 +987,13 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
           </div>
         </div>}
 
+        <div className="space-y-1">
+          <label className="text-xs block">Demo mobile OTP <span className="text-muted-foreground">(use 123456)</span>
+            <input aria-label="Demo mobile OTP" inputMode="numeric" maxLength={6} className="w-full mt-1 border rounded-lg px-3 py-2.5 text-sm bg-input" value={demoOtp} onChange={(e) => setDemoOtp(e.target.value.replace(/\D/g, "").slice(0, 6))} placeholder="123456" />
+          </label>
+          {demoOtp && demoOtp !== "123456" && <p className="text-destructive text-xs">Enter the demo OTP 123456.</p>}
+        </div>
+
         {apiError && (
           <p className="text-sm text-destructive bg-destructive/10 rounded-lg px-3 py-2.5">{apiError}</p>
         )}
@@ -951,7 +1003,7 @@ function PaymentView({ stockBlocked, items, total, itemCount, storeName, onClose
       <div className="border-t px-4 py-4 flex-shrink-0 space-y-2">
         <Button
           className="w-full"
-          disabled={submitting || stockBlocked || locating || quoting || !!quoteError || !deliveryCoords || !quote}
+          disabled={submitting || stockBlocked || locating || quoting || !!quoteError || !deliveryCoords || !quote || !reservationExpiresAt || reservationSeconds <= 0 || demoOtp !== "123456"}
           onClick={handlePlaceOrder}
         >
           {submitting ? (

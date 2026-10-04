@@ -37,6 +37,7 @@ async function setup(page: Page, options: { stock?: number; unserviceable?: bool
 async function checkout(page: Page) {
   await page.getByRole("button", { name: "Open cart" }).click();
   await page.getByRole("button", { name: "Checkout →" }).click();
+  await page.getByLabel("Demo mobile OTP").fill("123456");
 }
 
 for (const method of ["Card (demo)", "Apple Pay (demo)", "G Pay / UPI (demo)"]) {
