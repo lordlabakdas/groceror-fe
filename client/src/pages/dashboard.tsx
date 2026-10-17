@@ -103,10 +103,10 @@ declare global {
 // ---------------------------------------------------------------------------
 
 const STATUS_COLORS: Record<string, string> = {
-  pending: "bg-amber-900/30 text-amber-300 border border-amber-700/40",
-  confirmed: "bg-blue-900/30 text-blue-300 border border-blue-700/40",
-  ready: "bg-purple-900/30 text-purple-300 border border-purple-700/40",
-  delivered: "bg-amber-900/30 text-amber-300 border border-amber-700/40",
+  pending: "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/40",
+  confirmed: "bg-blue-100 text-blue-800 border border-blue-300 dark:bg-blue-900/30 dark:text-blue-300 dark:border-blue-700/40",
+  ready: "bg-purple-100 text-purple-800 border border-purple-300 dark:bg-purple-900/30 dark:text-purple-300 dark:border-purple-700/40",
+  delivered: "bg-amber-100 text-amber-800 border border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/40",
   cancelled: "bg-muted text-muted-foreground border border-border",
 };
 
@@ -554,8 +554,8 @@ export default function Dashboard() {
                   <Badge
                     className={
                       item.days_remaining <= 2
-                        ? "bg-red-900/30 text-red-300 border-red-700/40 text-xs"
-                        : "bg-amber-900/30 text-amber-300 border-amber-700/40 text-xs"
+                        ? "bg-red-100 text-red-800 border-red-300 dark:bg-red-900/30 dark:text-red-300 dark:border-red-700/40 text-xs"
+                        : "bg-amber-100 text-amber-800 border-amber-300 dark:bg-amber-900/30 dark:text-amber-300 dark:border-amber-700/40 text-xs"
                     }
                     variant="outline"
                   >
