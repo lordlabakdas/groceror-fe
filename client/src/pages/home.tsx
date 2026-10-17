@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { useLocation } from "wouter";
-import { Sun, Moon } from "lucide-react";
+import { Sun, Moon, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 import { useTheme } from "@/lib/theme-context";
@@ -162,14 +162,24 @@ export default function Home() {
             <div className="relative">
               <div className="aspect-square bg-surface-dark-panel rounded-3xl p-8 border border-surface-dark-foreground/10">
                 <div className="h-full flex flex-col">
-                  <div className="flex justify-between items-end mb-8">
+                  <div className="flex justify-between items-start mb-8">
                     <div className="space-y-1">
-                      <div className="text-[10px] font-mono text-surface-dark-muted">
-                        GROSS_REVENUE
+                      <div className="text-[10px] font-mono text-surface-dark-muted uppercase tracking-wider">
+                        Gross Revenue
                       </div>
                       <div className="text-3xl font-display">$4,280.50</div>
+                      <div className="flex items-center gap-1 text-xs font-mono text-emerald-500">
+                        <ArrowUpRight className="size-3.5" />
+                        +12.4% vs last week
+                      </div>
                     </div>
-                    <div className="h-12 w-32 rounded bg-primary/10 border border-primary/20" />
+                    <div className="text-right space-y-1">
+                      <div className="text-[10px] font-mono text-surface-dark-muted uppercase tracking-wider">
+                        This Week
+                      </div>
+                      <div className="text-2xl font-display">142</div>
+                      <div className="text-[10px] font-mono text-surface-dark-muted">orders</div>
+                    </div>
                   </div>
                   <div className="flex-1 border-t border-surface-dark-foreground/5 pt-6">
                     <div className="text-[10px] font-mono text-surface-dark-muted mb-4 uppercase">
